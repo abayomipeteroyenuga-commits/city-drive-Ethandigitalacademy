@@ -1,0 +1,217 @@
+#hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+}
+
+#speedometer {
+  position: absolute;
+  bottom: 28px;
+  right: 28px;
+  width: 160px;
+  background: rgba(8, 10, 20, 0.85);
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  border-radius: 12px;
+  padding: 14px 16px;
+  text-align: center;
+}
+
+.speed-value {
+  font-size: 2.4rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+}
+
+.speed-value .unit {
+  font-size: 0.7rem;
+  color: #6a8aaa;
+  margin-left: 4px;
+}
+
+.gear {
+  font-size: 1.1rem;
+  color: #00d4ff;
+  margin: 4px 0 8px;
+  font-weight: 600;
+}
+
+.rpm-bar {
+  height: 4px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+#rpm-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #00d4ff, #ff4d8d);
+  transition: width 0.08s linear;
+}
+
+#vehicle-status {
+  position: absolute;
+  bottom: 28px;
+  left: 28px;
+  width: 180px;
+  background: rgba(8, 10, 20, 0.85);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 0.75rem;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.stat-row:last-child {
+  margin-bottom: 0;
+}
+
+.stat-row span:first-child {
+  width: 42px;
+  color: #8a9aaa;
+  font-weight: 600;
+}
+
+.stat-row .bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.stat-row .bar div {
+  height: 100%;
+  width: 100%;
+  border-radius: 3px;
+  transition: width 0.2s;
+}
+
+#fuel-bar { background: linear-gradient(90deg, #ffaa00, #00d4ff); }
+#cond-bar { background: linear-gradient(90deg, #ff4d4d, #00ff88); }
+#nitro-bar { background: linear-gradient(90deg, #7b5cff, #00d4ff); }
+
+.stat-row span:last-child {
+  width: 36px;
+  text-align: right;
+  color: #c0c8d8;
+}
+
+#top-bar {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  background: rgba(8, 10, 20, 0.8);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 10px;
+  padding: 8px 22px;
+}
+
+#money-display {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #00ff9d;
+}
+
+#wanted-stars {
+  color: #ffcc00;
+  letter-spacing: 2px;
+  font-size: 1rem;
+  min-width: 60px;
+  text-align: center;
+}
+
+#level-display {
+  font-size: 0.9rem;
+  color: #7b5cff;
+  font-weight: 600;
+}
+
+#mission-panel {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(8, 10, 20, 0.88);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  border-radius: 10px;
+  padding: 12px 20px;
+  text-align: center;
+  min-width: 280px;
+}
+
+#mission-title {
+  font-weight: 700;
+  color: #00d4ff;
+  margin-bottom: 4px;
+}
+
+#mission-objective {
+  font-size: 0.9rem;
+  color: #c0c8d8;
+}
+
+#mission-distance {
+  font-size: 0.8rem;
+  color: #8a9aaa;
+  margin-top: 4px;
+}
+
+#minimap-container {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 180px;
+  height: 180px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid rgba(0, 212, 255, 0.35);
+  background: rgba(10, 15, 30, 0.9);
+}
+
+#minimap {
+  width: 100%;
+  height: 100%;
+}
+
+#prompt {
+  position: absolute;
+  bottom: 160px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 212, 255, 0.15);
+  border: 1px solid rgba(0, 212, 255, 0.5);
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #00d4ff;
+  letter-spacing: 0.05em;
+}
+
+#mp-board {
+  position: absolute;
+  top: 70px;
+  left: 18px;
+  min-width: 180px;
+  background: rgba(8, 10, 20, 0.85);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+#mp-board .you { color: #00ff9d; font-weight: 700; }

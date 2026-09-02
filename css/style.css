@@ -1,0 +1,109 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a0a12;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: #e8e8f0;
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Loading Screen */
+#loading-screen {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(160deg, #0a0a18 0%, #12122a 50%, #0d1a2a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.loading-content {
+  text-align: center;
+  max-width: 420px;
+  padding: 2rem;
+}
+
+.logo {
+  font-size: 3.2rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  background: linear-gradient(90deg, #00d4ff, #7b5cff, #ff4d8d);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.4rem;
+  text-shadow: 0 0 40px rgba(0, 212, 255, 0.3);
+}
+
+.tagline {
+  font-size: 0.85rem;
+  letter-spacing: 0.35em;
+  color: #8a8aaa;
+  margin-bottom: 2.5rem;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+#progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #00d4ff, #7b5cff);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+#loading-text {
+  font-size: 0.9rem;
+  color: #6a6a8a;
+}
+
+/* Toast */
+#toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 12, 25, 0.92);
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  z-index: 9000;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+#toast.show {
+  opacity: 1;
+}
+
+#toast.hidden {
+  opacity: 0;
+}

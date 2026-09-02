@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>CITY DRIVE — Earn • Drive • Explore • Build</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/hud.css" />
+  <link rel="stylesheet" href="css/menus.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div class="loading-content">
+      <h1 class="logo">CITY DRIVE</h1>
+      <p class="tagline">EARN • DRIVE • EXPLORE • BUILD</p>
+      <div class="progress-bar">
+        <div id="progress-fill"></div>
+      </div>
+      <p id="loading-text">Loading Nova City...</p>
+    </div>
+  </div>
+
+  <!-- Main Menu -->
+  <div id="main-menu" class="menu-screen hidden">
+    <div class="menu-bg"></div>
+    <div class="menu-content">
+      <h1 class="logo">CITY DRIVE</h1>
+      <p class="tagline">EARN • DRIVE • EXPLORE • BUILD</p>
+      <div class="menu-buttons">
+        <button id="btn-new-game" class="menu-btn primary">NEW GAME</button>
+        <button id="btn-continue" class="menu-btn">CONTINUE</button>
+        <button id="btn-garage" class="menu-btn">GARAGE</button>
+        <button id="btn-dealerships" class="menu-btn">DEALERSHIPS</button>
+        <button id="btn-marketplace" class="menu-btn">MARKETPLACE</button>
+        <button id="btn-jobs" class="menu-btn">JOBS</button>
+        <button id="btn-races" class="menu-btn">RACES</button>
+        <button id="btn-multiplayer" class="menu-btn primary">MULTIPLAYER RACE</button>
+        <button id="btn-map" class="menu-btn">MAP</button>
+        <button id="btn-achievements" class="menu-btn">ACHIEVEMENTS</button>
+        <button id="btn-profile" class="menu-btn">PROFILE</button>
+        <button id="btn-settings" class="menu-btn">SETTINGS</button>
+        <button id="btn-howto" class="menu-btn">HOW TO PLAY</button>
+        <button id="btn-credits" class="menu-btn">CREDITS</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Canvas Container -->
+  <div id="game-container" class="hidden">
+    <canvas id="game-canvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud">
+      <div id="speedometer">
+        <div class="speed-value"><span id="speed-num">000</span><span class="unit">KM/H</span></div>
+        <div class="gear" id="gear-display">P</div>
+        <div class="rpm-bar"><div id="rpm-fill"></div></div>
+      </div>
+
+      <div id="vehicle-status">
+        <div class="stat-row"><span>FUEL</span><div class="bar"><div id="fuel-bar"></div></div><span id="fuel-pct">100%</span></div>
+        <div class="stat-row"><span>COND</span><div class="bar"><div id="cond-bar"></div></div><span id="cond-pct">100%</span></div>
+        <div class="stat-row"><span>NITRO</span><div class="bar nitro"><div id="nitro-bar"></div></div></div>
+      </div>
+
+      <div id="top-bar">
+        <div id="money-display">$0</div>
+        <div id="wanted-stars"></div>
+        <div id="level-display">LVL 1</div>
+      </div>
+
+      <div id="mission-panel" class="hidden">
+        <div id="mission-title"></div>
+        <div id="mission-objective"></div>
+        <div id="mission-distance"></div>
+      </div>
+
+      <div id="minimap-container">
+        <canvas id="minimap" width="180" height="180"></canvas>
+      </div>
+
+      <div id="prompt" class="hidden"></div>
+      <div id="mp-board" class="hidden"></div>
+    </div>
+
+    <!-- Mobile Controls -->
+    <div id="mobile-controls" class="hidden">
+      <div class="steer-pad">
+        <button id="btn-left" class="ctrl-btn">◀</button>
+        <button id="btn-right" class="ctrl-btn">▶</button>
+      </div>
+      <div class="action-pad">
+        <button id="btn-accel" class="ctrl-btn accel">▲</button>
+        <button id="btn-brake" class="ctrl-btn brake">▼</button>
+        <button id="btn-handbrake" class="ctrl-btn">HB</button>
+        <button id="btn-nitro" class="ctrl-btn nitro">N</button>
+        <button id="btn-camera" class="ctrl-btn">C</button>
+        <button id="btn-exit" class="ctrl-btn">E</button>
+      </div>
+    </div>
+
+    <!-- Pause Menu -->
+    <div id="pause-menu" class="menu-overlay hidden">
+      <div class="overlay-content">
+        <h2>PAUSED</h2>
+        <button id="btn-resume" class="menu-btn primary">RESUME</button>
+        <button id="btn-pause-map" class="menu-btn">MAP</button>
+        <button id="btn-pause-garage" class="menu-btn">GARAGE</button>
+        <button id="btn-pause-missions" class="menu-btn">MISSIONS</button>
+        <button id="btn-pause-mp" class="menu-btn">MULTIPLAYER</button>
+        <button id="btn-pause-settings" class="menu-btn">SETTINGS</button>
+        <button id="btn-restart" class="menu-btn">RESTART</button>
+        <button id="btn-main-menu" class="menu-btn">MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- UI Panels (Dealership, Garage, etc.) will be injected by JS -->
+  <div id="ui-panels"></div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="hidden"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

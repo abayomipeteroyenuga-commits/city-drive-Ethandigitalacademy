@@ -1,0 +1,295 @@
+/**
+ * Keyboard-first input. Held-key state + one-shot presses + remapping.
+ */
+
+export const DEFAULT_BINDS = {
+  accel: ['KeyW', 'ArrowUp'],
+  brake: ['KeyS', 'ArrowDown'],
+  left: ['KeyA', 'ArrowLeft'],
+  right: ['KeyD', 'ArrowRight'],
+  handbrake: ['Space'],
+  nitro: ['ShiftLeft', 'ShiftRight'],
+  camera: ['KeyC'],
+  interact: ['KeyE'],
+  headlights: ['KeyF'],
+  horn: ['KeyH'],
+  map: ['KeyM'],
+  garage: ['KeyG'],
+  pause: ['Escape', 'KeyP'],
+  jump: ['Space']
+};
+
+const GAME_CODES = new Set([
+  'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+  'ShiftLeft', 'ShiftRight', 'Tab'
+]);
+
+function isTypingTarget(el) {
+  if (!el) return false;
+  const tag = el.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+  return !!el.isContentEditable;
+}
+
+export function loadBinds() {
+  try {
+    const raw = localStorage.getItem('citydrive_binds_v1');
+    if (!raw) return { ...DEFAULT_BINDS };
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { ...DEFAULT_BINDS };
+    const clean = {};
+    for (const [action, defaults] of Object.entries(DEFAULT_BINDS)) {
+      const value = parsed[action];
+      clean[action] = Array.isArray(value) && value.every(v => typeof v === 'string') && value.length
+        ? value.slice(0, 3)
+        : [...defaults];
+    }
+    return clean;
+  } catch {
+    return { ...DEFAULT_BINDS };
+  }
+}
+
+export function saveBinds(binds) {
+  try { localStorage.setItem('citydrive_binds_v1', JSON.stringify(binds)); } catch {}
+}
+
+export function codeLabel(code) {
+  return String(code)
+    .replace('Key', '')
+    .replace('Arrow', 'Arrow ')
+    .replace('ShiftLeft', 'Left Shift')
+    .replace('ShiftRight', 'Right Shift')
+    .replace('Space', 'Space')
+    .replace('Escape', 'Esc');
+}
+
+export class Input {
+  constructor() {
+    this.binds = loadBinds();
+    this.held = new Set();
+    this._pressed = new Set();
+    this._consumed = new Set();
+    this.gameplayEnabled = true;
+    this.menuMode = false;
+    this.remapAction = null;
+    this.onMenuKey = null;
+
+    this.accel = false;
+    this.brake = false;
+    this.left = false;
+    this.right = false;
+    this.handbrake = false;
+    this.nitro = false;
+    this.enter = false;
+    this.camera = false;
+    this.map = false;
+    this.pause = false;
+    this.garage = false;
+    this.headlights = false;
+    this.horn = false;
+    this.jump = false;
+
+    this.p2 = { accel: false, brake: false, left: false, right: false, handbrake: false, nitro: false };
+
+    this._onDown = (e) => this._down(e);
+    this._onUp = (e) => this._up(e);
+    this._onBlur = () => this.clearGameplay();
+    this._onVis = () => { if (document.hidden) this.clearGameplay(); };
+
+    window.addEventListener('keydown', this._onDown);
+    window.addEventListener('keyup', this._onUp);
+    window.addEventListener('blur', this._onBlur);
+    document.addEventListener('visibilitychange', this._onVis);
+  }
+
+  setBinds(binds) {
+    this.binds = { ...DEFAULT_BINDS, ...binds };
+    saveBinds(this.binds);
+  }
+
+  resetBinds() {
+    this.setBinds({ ...DEFAULT_BINDS });
+  }
+
+  _matches(action, code) {
+    const list = this.binds[action] || DEFAULT_BINDS[action] || [];
+    return list.includes(code);
+  }
+
+  _down(e) {
+    const code = e.code;
+    if (this.remapAction) {
+      e.preventDefault();
+      if (code !== 'Escape') this._finishRemap(code);
+      else this.remapAction = null;
+      return;
+    }
+
+    if (isTypingTarget(e.target)) return;
+
+    const panelOpen = !!document.getElementById('active-panel');
+    const pauseOpen = document.getElementById('pause-menu') && !document.getElementById('pause-menu').classList.contains('hidden');
+    const mainOpen = document.getElementById('main-menu') && !document.getElementById('main-menu').classList.contains('hidden');
+
+    if (this._shouldPrevent(code) && !isTypingTarget(e.target)) e.preventDefault();
+
+    if (e.repeat) {
+      this.held.add(code);
+      this._syncAxes();
+      return;
+    }
+
+    this.held.add(code);
+    this._pressed.add(code);
+
+    if (panelOpen || pauseOpen || mainOpen) {
+      this.gameplayEnabled = false;
+      if (this.onMenuKey) this.onMenuKey(e);
+      this._syncAxes();
+      this.gameplayEnabled = !panelOpen && !pauseOpen && !mainOpen;
+      return;
+    }
+    this.gameplayEnabled = true;
+
+    this._syncAxes();
+  }
+
+  _up(e) {
+    const code = e.code;
+    this.held.delete(code);
+    this._pressed.delete(code);
+    this._consumed.delete(code);
+    this._syncAxes();
+  }
+
+  _shouldPrevent(code) {
+    if (GAME_CODES.has(code)) return true;
+    for (const list of Object.values(this.binds)) {
+      if (list.includes(code)) return true;
+    }
+    return false;
+  }
+
+  _syncAxes() {
+    if (!this.gameplayEnabled || isTypingTarget(document.activeElement)) {
+      this.accel = this.brake = this.left = this.right = false;
+      this.handbrake = this.nitro = false;
+      this.p2.accel = this.p2.brake = this.p2.left = this.p2.right = false;
+      this.p2.handbrake = this.p2.nitro = false;
+      return;
+    }
+    this.accel = this._heldAction('accel');
+    this.brake = this._heldAction('brake');
+    this.left = this._heldAction('left');
+    this.right = this._heldAction('right');
+    this.handbrake = this._heldAction('handbrake');
+    this.nitro = this._heldAction('nitro');
+    this.enter = this._heldAction('interact');
+    this.camera = this._heldAction('camera');
+    this.map = this._heldAction('map');
+    this.garage = this._heldAction('garage');
+    this.pause = this._heldAction('pause');
+    this.headlights = this._heldAction('headlights');
+    this.horn = this._heldAction('horn');
+    this.jump = this._heldAction('jump');
+
+    this.p2.accel = this.held.has('KeyI');
+    this.p2.brake = this.held.has('KeyK');
+    this.p2.left = this.held.has('KeyJ');
+    this.p2.right = this.held.has('KeyL');
+    this.p2.nitro = this.held.has('KeyU');
+    this.p2.handbrake = this.held.has('KeyO');
+  }
+
+  _heldAction(action) {
+    const list = this.binds[action] || [];
+    return list.some((c) => this.held.has(c));
+  }
+
+  _justPressedAction(action) {
+    const list = this.binds[action] || [];
+    for (const c of list) {
+      if (this._pressed.has(c) && !this._consumed.has(c)) {
+        this._consumed.add(c);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  consume(action) {
+    return this._justPressedAction(action);
+  }
+
+  consumeCamera() { return this.consume('camera'); }
+  consumeEnter() { return this.consume('interact'); }
+  consumePause() { return this.consume('pause'); }
+  consumeMap() { return this.consume('map'); }
+  consumeGarage() { return this.consume('garage'); }
+  consumeHeadlights() { return this.consume('headlights'); }
+  consumeHorn() { return this.consume('horn'); }
+
+  clearGameplay() {
+    this.held.clear();
+    this._pressed.clear();
+    this._consumed.clear();
+    this.accel = this.brake = this.left = this.right = false;
+    this.handbrake = this.nitro = this.enter = this.camera = false;
+    this.map = this.pause = this.garage = this.headlights = this.horn = this.jump = false;
+    this.p2.accel = this.p2.brake = this.p2.left = this.p2.right = false;
+    this.p2.handbrake = this.p2.nitro = false;
+  }
+
+  beginRemap(action) {
+    this.remapAction = action;
+  }
+
+  _finishRemap(code) {
+    const action = this.remapAction;
+    this.remapAction = null;
+    if (!action) return;
+    const next = { ...this.binds, [action]: [code] };
+    if (action === 'nitro') next.nitro = [code, code === 'ShiftLeft' ? 'ShiftRight' : code];
+    this.setBinds(next);
+    if (this.onRemap) this.onRemap(action, code);
+  }
+
+  bindMobile() {
+    const hold = (id, prop) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const start = (e) => { e.preventDefault(); this[prop] = true; };
+      const end = (e) => { e.preventDefault(); this[prop] = false; };
+      el.addEventListener('touchstart', start, { passive: false });
+      el.addEventListener('touchend', end);
+      el.addEventListener('touchcancel', end);
+      el.addEventListener('mousedown', start);
+      el.addEventListener('mouseup', end);
+      el.addEventListener('mouseleave', end);
+    };
+    hold('btn-accel', 'accel');
+    hold('btn-brake', 'brake');
+    hold('btn-left', 'left');
+    hold('btn-right', 'right');
+    hold('btn-handbrake', 'handbrake');
+    hold('btn-nitro', 'nitro');
+    const cam = document.getElementById('btn-camera');
+    if (cam) cam.addEventListener('click', () => { this._fakePress('camera'); });
+    const ex = document.getElementById('btn-exit');
+    if (ex) ex.addEventListener('click', () => { this._fakePress('interact'); });
+  }
+
+  _fakePress(action) {
+    const code = (this.binds[action] || ['KeyE'])[0];
+    this.held.add(code);
+    this._pressed.add(code);
+    this._syncAxes();
+    setTimeout(() => {
+      this.held.delete(code);
+      this._pressed.delete(code);
+      this._consumed.delete(code);
+      this._syncAxes();
+    }, 80);
+  }
+}

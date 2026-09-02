@@ -1,0 +1,139 @@
+/* Mobile Controls */
+#mobile-controls {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 150;
+}
+
+#mobile-controls .ctrl-btn {
+  pointer-events: auto;
+  background: rgba(15, 20, 40, 0.7);
+  border: 2px solid rgba(0, 212, 255, 0.4);
+  color: #e0e8f0;
+  border-radius: 50%;
+  font-size: 1.4rem;
+  font-weight: 700;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+}
+
+#mobile-controls .ctrl-btn:active {
+  background: rgba(0, 212, 255, 0.35);
+  border-color: #00d4ff;
+}
+
+.steer-pad {
+  position: absolute;
+  bottom: 40px;
+  left: 30px;
+  display: flex;
+  gap: 16px;
+}
+
+.action-pad {
+  position: absolute;
+  bottom: 30px;
+  right: 24px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.action-pad .accel {
+  grid-column: 1 / -1;
+  border-radius: 16px;
+  height: 56px;
+  width: 140px;
+  justify-self: center;
+}
+
+.action-pad .brake {
+  height: 52px;
+  width: 64px;
+}
+
+.action-pad .nitro {
+  border-color: rgba(123, 92, 255, 0.6);
+  color: #b0a0ff;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  #speedometer {
+    bottom: 20px;
+    right: 16px;
+    width: 130px;
+    padding: 10px 12px;
+  }
+  .speed-value {
+    font-size: 1.9rem;
+  }
+  #vehicle-status {
+    bottom: 20px;
+    left: 12px;
+    width: 150px;
+    font-size: 0.7rem;
+  }
+  #minimap-container {
+    width: 130px;
+    height: 130px;
+    top: 12px;
+    right: 12px;
+  }
+  #top-bar {
+    top: 12px;
+    padding: 6px 14px;
+    gap: 14px;
+    font-size: 0.9rem;
+  }
+  .logo {
+    font-size: 2.4rem;
+  }
+}
+
+@media (max-width: 600px) {
+  #mobile-controls {
+    display: block !important;
+  }
+  #hud #vehicle-status {
+    display: none;
+  }
+  #speedometer {
+    bottom: 140px;
+  }
+}
+
+@media (min-width: 601px) {
+  #mobile-controls {
+    display: none !important;
+  }
+}
+
+/* Landscape phones */
+@media (max-height: 500px) and (orientation: landscape) {
+  #speedometer {
+    bottom: 12px;
+    right: 12px;
+    width: 110px;
+  }
+  .speed-value {
+    font-size: 1.6rem;
+  }
+  #minimap-container {
+    width: 100px;
+    height: 100px;
+  }
+  .steer-pad, .action-pad {
+    bottom: 16px;
+  }
+  #mobile-controls .ctrl-btn {
+    width: 52px;
+    height: 52px;
+    font-size: 1.1rem;
+  }
+}
