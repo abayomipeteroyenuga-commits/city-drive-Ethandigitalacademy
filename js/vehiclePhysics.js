@@ -69,7 +69,9 @@ export class VehicleController {
 
     const maxSteer = (isBike ? 0.72 : this.def.type === 'commercial' ? 0.28 : 0.44)
       * (1.2 - Math.min(0.65, Math.abs(this.speed) / Math.max(4, st.top)));
-    const targetSteer = (input.left ? 1 : 0) - (input.right ? 1 : 0);
+    const keyboardSteer = (input.left ? 1 : 0) - (input.right ? 1 : 0);
+    const gyroSteer = input.gyroEnabled ? (input.gyroSteer || 0) : 0;
+    const targetSteer = Math.abs(gyroSteer) > 0.08 ? gyroSteer : keyboardSteer;
     this.steerAngle = THREE.MathUtils.damp(this.steerAngle, targetSteer * maxSteer, 12, dt);
 
     let force = 0;

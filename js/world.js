@@ -268,7 +268,9 @@ export class World {
     this.sun = new THREE.DirectionalLight(0xfff2d8, 1.1);
     this.sun.position.set(80, 140, 40);
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(1024, 1024);
+    this.sun.shadow.mapSize.set(2048, 2048);
+    this.sun.shadow.bias = -0.0002;
+    this.sun.shadow.normalBias = 0.015;
     this.sun.shadow.camera.near = 10;
     this.sun.shadow.camera.far = 400;
     this.sun.shadow.camera.left = -120;
@@ -276,8 +278,9 @@ export class World {
     this.sun.shadow.camera.top = 120;
     this.sun.shadow.camera.bottom = -120;
     this.scene.add(this.sun);
-    this.scene.fog = new THREE.Fog(0x87a0b8, 80, 480);
+    this.scene.fog = new THREE.Fog(0x87a0b8, 90, 620);
     this.scene.background = new THREE.Color(0x87b0d0);
+    this.scene.environment = null;
   }
 
   getGroundHeight() {

@@ -1,3 +1,5 @@
+const THREEClamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
 /**
  * Keyboard-first input. Held-key state + one-shot presses + remapping.
  */
@@ -16,7 +18,8 @@ export const DEFAULT_BINDS = {
   map: ['KeyM'],
   garage: ['KeyG'],
   pause: ['Escape', 'KeyP'],
-  jump: ['Space']
+  jump: ['Space'],
+  sprint: ['ControlLeft', 'ControlRight']
 };
 
 const GAME_CODES = new Set([
@@ -89,6 +92,10 @@ export class Input {
     this.headlights = false;
     this.horn = false;
     this.jump = false;
+    this.sprint = false;
+    this.gyroEnabled = false;
+    this.gyroSteer = 0;
+    this.gyroBaseline = null;
 
     this.p2 = { accel: false, brake: false, left: false, right: false, handbrake: false, nitro: false };
 
@@ -193,6 +200,7 @@ export class Input {
     this.headlights = this._heldAction('headlights');
     this.horn = this._heldAction('horn');
     this.jump = this._heldAction('jump');
+    this.sprint = this._heldAction('sprint');
 
     this.p2.accel = this.held.has('KeyI');
     this.p2.brake = this.held.has('KeyK');
@@ -237,6 +245,7 @@ export class Input {
     this.accel = this.brake = this.left = this.right = false;
     this.handbrake = this.nitro = this.enter = this.camera = false;
     this.map = this.pause = this.garage = this.headlights = this.horn = this.jump = false;
+    this.sprint = false;
     this.p2.accel = this.p2.brake = this.p2.left = this.p2.right = false;
     this.p2.handbrake = this.p2.nitro = false;
   }
@@ -254,6 +263,30 @@ export class Input {
     this.setBinds(next);
     if (this.onRemap) this.onRemap(action, code);
   }
+
+  async enableGyroscope() {
+    if (!window.DeviceOrientationEvent) return false;
+    try {
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        const permission = await DeviceOrientationEvent.requestPermission();
+        if (permission !== 'granted') return false;
+      }
+      if (!this._gyroBound) {
+        this._gyroHandler = (e) => {
+          const gamma = Number.isFinite(e.gamma) ? e.gamma : 0;
+          if (this.gyroBaseline == null) this.gyroBaseline = gamma;
+          const delta = THREEClamp(gamma - this.gyroBaseline, -35, 35);
+          this.gyroSteer = Math.max(-1, Math.min(1, delta / 22));
+        };
+        window.addEventListener('deviceorientation', this._gyroHandler, true);
+        this._gyroBound = true;
+      }
+      this.gyroEnabled = true;
+      return true;
+    } catch { return false; }
+  }
+
+  disableGyroscope() { this.gyroEnabled = false; this.gyroSteer = 0; this.gyroBaseline = null; }
 
   bindMobile() {
     const hold = (id, prop) => {
@@ -274,6 +307,12 @@ export class Input {
     hold('btn-right', 'right');
     hold('btn-handbrake', 'handbrake');
     hold('btn-nitro', 'nitro');
+    hold('btn-sprint', 'sprint');
+    const gyro = document.getElementById('btn-gyro');
+    if (gyro) gyro.addEventListener('click', async () => {
+      if (this.gyroEnabled) { this.disableGyroscope(); gyro.classList.remove('active'); gyro.textContent = 'GYRO'; }
+      else { const ok = await this.enableGyroscope(); if (ok) { gyro.classList.add('active'); gyro.textContent = 'GYRO ✓'; } }
+    });
     const cam = document.getElementById('btn-camera');
     if (cam) cam.addEventListener('click', () => { this._fakePress('camera'); });
     const ex = document.getElementById('btn-exit');

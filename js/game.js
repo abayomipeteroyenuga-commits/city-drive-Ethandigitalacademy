@@ -31,9 +31,13 @@ export class Game {
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio * 1.15, 2.5));
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.12;
     this.renderer.shadowMap.enabled = Settings.get('graphics') !== 'low';
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.autoUpdate = true;
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 900);
@@ -98,7 +102,7 @@ export class Game {
     this.state.player.name = name || 'Driver';
     this.economy.money = this.state.player.money;
     this._spawnOwnedVehicles();
-    this.enterWorld();
+    this.enterWorld(true);
     saveGame(this._savePayload());
   }
 
@@ -122,7 +126,7 @@ export class Game {
     this.state.visitedDistricts = data.visitedDistricts || [];
     this.economy.money = this.state.player.money;
     this._spawnOwnedVehicles();
-    this.enterWorld();
+    this.enterWorld(true);
     this.persist();
   }
 
@@ -162,10 +166,18 @@ export class Game {
     return this.vehicleActors.find(a => a.def.vehicleUid === uid && !a.temp) || null;
   }
 
-  enterWorld() {
+  enterWorld(startInVehicle = true) {
     this.inMenu = false;
     this.paused = false;
-    this.mode = 'onfoot';
+    // Start directly in the player's owned vehicle so the game opens as a driving game.
+    this.mode = startInVehicle && this.activeActor ? 'driving' : 'onfoot';
+    this.controller = this.mode === 'driving' ? this.activeActor.ctrl : null;
+    this.playerMesh.visible = this.mode !== 'driving';
+    if (this.mode === 'driving') {
+      this.controller.speed = 0;
+      this.controller.heading = this.activeActor.mesh.rotation.y;
+      this.controller.lastPos.copy(this.activeActor.mesh.position);
+    }
     this.ui.showGame();
     this.audio.resume();
     this.audio.setVolumes(Settings.get('soundVolume'), Settings.get('musicVolume'), Settings.get('musicOn'));
@@ -300,7 +312,7 @@ export class Game {
 
     if (dir.lengthSq() > 0) {
       dir.normalize();
-      const speed = input.nitro ? 7.5 : 4.2;
+      const speed = input.sprint ? 8.8 : 4.2;
       // simple world-aligned walk
       this.playerMesh.position.x += dir.x * speed * dt;
       this.playerMesh.position.z += dir.z * speed * dt;

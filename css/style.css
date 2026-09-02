@@ -107,3 +107,8 @@ html, body {
 #toast.hidden {
   opacity: 0;
 }
+
+#btn-gyro.active {
+  box-shadow: 0 0 18px rgba(0, 212, 255, .75);
+  border-color: rgba(0, 212, 255, .9);
+}
