@@ -2,27 +2,28 @@
  * Lightweight traffic, pedestrians, and police
  */
 import * as THREE from 'three';
+import { VEHICLES, cloneVehicle } from './vehicles.js';
+import { createVehicleMesh } from './vehicleFactory.js';
 
-function simpleCar(color) {
-  const g = new THREE.Group();
-  const body = new THREE.Mesh(
-    new THREE.BoxGeometry(1.6, 0.5, 3.2),
-    new THREE.MeshStandardMaterial({ color })
-  );
-  body.position.y = 0.5;
-  body.castShadow = true;
-  g.add(body);
-  return g;
+function trafficVehicle(id, colorOverride) {
+  const base = VEHICLES.find(v => v.id === id) || VEHICLES[0];
+  const def = cloneVehicle(base, { isOwned: false, currentFuel: base.fuelCapacity, currentCondition: 100 });
+  if (colorOverride !== undefined) { def.color = colorOverride; def.customization = { primaryColor: colorOverride, secondaryColor: base.secondaryColor }; }
+  return createVehicleMesh(def);
 }
 
 function simplePed(color) {
   const g = new THREE.Group();
-  const body = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.22, 0.7, 4, 8),
-    new THREE.MeshStandardMaterial({ color })
-  );
-  body.position.y = 0.85;
-  g.add(body);
+  const skin = new THREE.MeshStandardMaterial({ color: 0xd39b78, roughness: 0.8 });
+  const shirt = new THREE.MeshStandardMaterial({ color, roughness: 0.75 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x20242b, roughness: 0.9 });
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.55, 0.25), shirt);
+  torso.position.y = 0.95;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 8), skin);
+  head.position.y = 1.38;
+  const legs = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.55, 0.22), dark);
+  legs.position.y = 0.42;
+  [torso, head, legs].forEach(m => { m.castShadow = true; m.receiveShadow = true; g.add(m); });
   return g;
 }
 
@@ -38,11 +39,12 @@ export class NPCSystem {
   }
 
   spawn(densityT = 0.7, densityP = 0.6) {
-    const colors = [0xcc4444, 0x4488cc, 0xdddddd, 0x333333, 0x44aa66, 0xccaa22];
-    const nT = Math.floor(18 * densityT);
+    const colors = [0xcc2222, 0x2266cc, 0xe5e5e5, 0x20252b, 0x2e9b63, 0xc99a20, 0xeeeeee, 0x5522aa];
+    const trafficIds = ['metro_s','urban_lx','falcon_sport','titan_muscle','city_explorer','grand_terrain','cargo_king','city_van','street_hawk','phantom_rr','apex_900','road_master'];
+    const nT = Math.floor(20 * densityT);
     const nP = Math.floor(14 * densityP);
     for (let i = 0; i < nT; i++) {
-      const mesh = simpleCar(colors[i % colors.length]);
+      const mesh = trafficVehicle(trafficIds[i % trafficIds.length], colors[i % colors.length]);
       const lane = (i % 9) - 4;
       mesh.position.set(lane * 80 + (i % 2 ? 4 : -4), 0, (i * 70) % 600 - 300);
       mesh.rotation.y = i % 2 ? 0 : Math.PI;
@@ -50,7 +52,7 @@ export class NPCSystem {
       this.traffic.push({
         mesh,
         speed: 12 + (i % 5) * 2,
-        heading: i % 2 ? 0 : Math.PI,
+        heading: i % 2 ? Math.PI / 2 : 0,
         axis: i % 2 === 0 ? 'z' : 'x'
       });
     }
@@ -61,11 +63,12 @@ export class NPCSystem {
       this.peds.push({
         mesh,
         dir: new THREE.Vector3(Math.sin(i), 0, Math.cos(i)).normalize(),
-        speed: 1.2 + (i % 3) * 0.3
+        speed: 1.2 + (i % 3) * 0.3,
+        phase: i * 0.8
       });
     }
     for (let i = 0; i < 3; i++) {
-      const mesh = simpleCar(0x1a2a88);
+      const mesh = trafficVehicle('urban_lx', 0x1a2a88);
       const light = new THREE.PointLight(0x2244ff, 0.4, 16);
       mesh.add(light);
       mesh.position.set(60 + i * 20, 0, 40 + i * 30);
@@ -78,16 +81,28 @@ export class NPCSystem {
     // traffic along grid axes
     for (const t of this.traffic) {
       const f = new THREE.Vector3(Math.sin(t.heading), 0, Math.cos(t.heading));
-      t.mesh.position.addScaledVector(f, t.speed * dt);
+      const stopped = this.world?.shouldStopTraffic?.(t.mesh.position, t.axis, t.heading);
+      const targetSpeed = stopped ? 0 : t.speed;
+      const step = THREE.MathUtils.lerp(0, targetSpeed, Math.min(1, dt * 4));
+      t.currentSpeed = step;
+      t.mesh.position.addScaledVector(f, step * dt);
       if (t.mesh.position.z > 360 || t.mesh.position.z < -360 || t.mesh.position.x > 360 || t.mesh.position.x < -360) {
-        t.heading += Math.PI / 2;
+        t.heading += Math.PI;
         t.mesh.rotation.y = t.heading;
         t.mesh.position.x = Math.max(-350, Math.min(350, t.mesh.position.x));
         t.mesh.position.z = Math.max(-350, Math.min(350, t.mesh.position.z));
       }
     }
     for (const p of this.peds) {
+      p.phase += dt * p.speed * 3.2;
       p.mesh.position.addScaledVector(p.dir, p.speed * dt);
+      const parts = p.mesh.userData.walkParts;
+      if (parts) {
+        const swing = Math.sin(p.phase) * 0.28;
+        parts.armL.rotation.z = swing; parts.armR.rotation.z = -swing;
+        parts.legs.scale.y = 1 + Math.abs(Math.sin(p.phase)) * 0.04;
+        parts.head.position.y = 1.38 + Math.sin(p.phase * 2) * 0.018;
+      }
       if (Math.abs(p.mesh.position.x) > 160 || Math.abs(p.mesh.position.z) > 160) {
         p.dir.multiplyScalar(-1);
       }

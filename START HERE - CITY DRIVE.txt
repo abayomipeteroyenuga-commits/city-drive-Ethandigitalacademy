@@ -1,0 +1,16 @@
+CITY DRIVE — OFFLINE START
+
+1. Download the ZIP.
+2. Right-click the ZIP > Properties > if you see UNBLOCK, tick it > Apply > OK.
+3. Right-click the ZIP > Extract All.
+4. Open the extracted "city-drive" folder.
+5. Double-click START-CITY-DRIVE.cmd.
+6. Wait a few seconds. The browser opens automatically when the local server is ready.
+
+IMPORTANT:
+- Do NOT double-click index.html.
+- Do NOT type 127.0.0.1 manually unless asked to troubleshoot.
+- Keep the black launcher window open while playing.
+- CITY DRIVE's game engine is stored locally and does not need internet.
+
+If Windows shows a security warning for the launcher, use the file's Properties > Unblock option first. This warning is caused by Windows security for downloaded script files; the launcher itself is not digitally signed.

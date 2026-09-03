@@ -13,8 +13,7 @@
   <script type="importmap">
   {
     "imports": {
-      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      "three": "./vendor/three/three.module.js"
     }
   }
   </script>
@@ -28,32 +27,20 @@
       <div class="progress-bar">
         <div id="progress-fill"></div>
       </div>
-      <p id="loading-text">Loading Nova City...</p>
+      <p id="loading-text">Starting CITY DRIVE...</p>
     </div>
   </div>
 
-  <!-- Main Menu -->
+  <!-- Main Menu / Ride Select -->
   <div id="main-menu" class="menu-screen hidden">
     <div class="menu-bg"></div>
-    <div class="menu-content">
-      <h1 class="logo">CITY DRIVE</h1>
-      <p class="tagline">EARN • DRIVE • EXPLORE • BUILD</p>
-      <div class="menu-buttons">
-        <button id="btn-new-game" class="menu-btn primary">NEW GAME</button>
+    <div class="menu-content landing-content">
+      <div class="landing-brand"><h1 class="logo">CITY DRIVE</h1><p class="tagline">EARN • DRIVE • EXPLORE • BUILD</p></div>
+      <div class="landing-actions">
+        <button id="btn-new-game" class="menu-btn primary">CHOOSE &amp; DRIVE</button>
         <button id="btn-continue" class="menu-btn">CONTINUE</button>
-        <button id="btn-garage" class="menu-btn">GARAGE</button>
-        <button id="btn-dealerships" class="menu-btn">DEALERSHIPS</button>
-        <button id="btn-marketplace" class="menu-btn">MARKETPLACE</button>
-        <button id="btn-jobs" class="menu-btn">JOBS</button>
-        <button id="btn-races" class="menu-btn">RACES</button>
-        <button id="btn-multiplayer" class="menu-btn primary">MULTIPLAYER RACE</button>
-        <button id="btn-map" class="menu-btn">MAP</button>
-        <button id="btn-achievements" class="menu-btn">ACHIEVEMENTS</button>
-        <button id="btn-profile" class="menu-btn">PROFILE</button>
-        <button id="btn-settings" class="menu-btn">SETTINGS</button>
-        <button id="btn-howto" class="menu-btn">HOW TO PLAY</button>
-        <button id="btn-credits" class="menu-btn">CREDITS</button>
       </div>
+      <p class="landing-note">Cars • SUVs • Power Bikes • Commercial Rides</p>
     </div>
   </div>
 
@@ -69,7 +56,7 @@
         <div class="rpm-bar"><div id="rpm-fill"></div></div>
       </div>
 
-      <div id="vehicle-status">
+      <div id="vehicle-status"><div id="vehicle-name-display">METRO</div>
         <div class="stat-row"><span>FUEL</span><div class="bar"><div id="fuel-bar"></div></div><span id="fuel-pct">100%</span></div>
         <div class="stat-row"><span>COND</span><div class="bar"><div id="cond-bar"></div></div><span id="cond-pct">100%</span></div>
         <div class="stat-row"><span>NITRO</span><div class="bar nitro"><div id="nitro-bar"></div></div></div>
@@ -85,6 +72,7 @@
         <div id="mission-title"></div>
         <div id="mission-objective"></div>
         <div id="mission-distance"></div>
+        <div id="mission-help">FOLLOW THE MARKER • COMPLETE THE OBJECTIVE • GET PAID</div><div id="mission-reward"></div>
       </div>
 
       <div id="minimap-container">
@@ -110,6 +98,7 @@
         <button id="btn-gyro" class="ctrl-btn">GYRO</button>
         <button id="btn-camera" class="ctrl-btn">C</button>
         <button id="btn-exit" class="ctrl-btn">E</button>
+        <button id="btn-pause-mobile" class="ctrl-btn">☰</button>
       </div>
     </div>
 
@@ -120,6 +109,9 @@
         <button id="btn-resume" class="menu-btn primary">RESUME</button>
         <button id="btn-pause-map" class="menu-btn">MAP</button>
         <button id="btn-pause-garage" class="menu-btn">GARAGE</button>
+        <button id="btn-pause-market" class="menu-btn">MARKETPLACE</button>
+        <button id="btn-pause-shop" class="menu-btn">CITY SHOP</button>
+        <button id="btn-pause-ranking" class="menu-btn">RANKINGS</button>
         <button id="btn-pause-missions" class="menu-btn">MISSIONS</button>
         <button id="btn-pause-mp" class="menu-btn">MULTIPLAYER</button>
         <button id="btn-pause-settings" class="menu-btn">SETTINGS</button>
@@ -135,6 +127,34 @@
   <!-- Notification Toast -->
   <div id="toast" class="hidden"></div>
 
-  <script type="module" src="js/main.js"></script>
+  <script>
+    // Boot through a tiny non-module loader so module/network failures never
+    // leave the player permanently stuck on the loading screen.
+    (async () => {
+      const text = document.getElementById('loading-text');
+      const fill = document.getElementById('progress-fill');
+      const set = (p, msg) => {
+        if (fill) fill.style.width = `${p}%`;
+        if (text) text.textContent = msg;
+      };
+      try {
+        set(8, 'Starting CITY DRIVE...');
+        await new Promise(r => requestAnimationFrame(r));
+        set(20, 'Loading game engine...');
+        await import('./js/main.js');
+      } catch (err) {
+        console.error('CITY DRIVE boot failure:', err);
+        set(100, 'Game startup failed — see details below');
+        const old = document.getElementById('boot-error');
+        if (!old) {
+          const box = document.createElement('div');
+          box.id = 'boot-error';
+          box.style.cssText = 'margin-top:14px;padding:12px 16px;border:1px solid rgba(255,255,255,.25);border-radius:10px;background:rgba(0,0,0,.45);color:#fff;font:14px/1.4 system-ui;text-align:center;max-width:520px;';
+          box.innerHTML = '<b>Game startup failed.</b><br>This offline build does not need internet, but browsers may block local ES modules when index.html is opened directly.<br><br><b>Fix:</b> open <code>start-city-drive.bat</code> from the game folder, then play at <code>the local CITY DRIVE launcher URL</code>.<br><br>Details: ' + String(err?.message || err).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          document.querySelector('.loading-content')?.appendChild(box);
+        }
+      }
+    })();
+  </script>
 </body>
 </html>

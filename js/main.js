@@ -7,19 +7,23 @@ let game = null;
 function setProgress(p, t) { ui.setLoading(p, t); }
 
 async function boot() {
-  setProgress(10, 'Loading engine...');
-  await tick();
-  setProgress(35, 'Building Nova City...');
+  setProgress(35, 'Loading CITY DRIVE systems...');
   await tick();
   setProgress(55, 'Preparing vehicles...');
   await tick();
-  setProgress(75, 'Starting systems...');
+  setProgress(75, 'Preparing city...');
   await tick();
-  setProgress(100, 'Ready');
-  await tick(200);
+  setProgress(90, 'Starting game...');
+  await tick();
+  setProgress(100, 'Ready — Drive!');
+  await tick(250);
   ui.hideLoading();
   wireMenu();
   wireMainMenuKeys();
+  // The first page is the vehicle showroom: see a real 3D ride, choose it, and drive.
+  const first = ensureGame();
+  first.enterWorld(true);
+  ui.openVehicleSelect(first);
 }
 
 function wireMainMenuKeys() {
@@ -57,24 +61,16 @@ function wireMenu() {
   document.getElementById('btn-new-game').onclick = () => {
     const name = prompt('Driver name?', 'Driver') || 'Driver';
     if (hasSave() && !confirm('Start a NEW GAME? This resets saved progress.')) return;
-    ensureGame().startNew(name);
+    const g = ensureGame();
+    g.startNew(name);
+    ui.openVehicleSelect(g);
   };
   document.getElementById('btn-continue').onclick = () => {
     if (!hasSave()) { ui.toast('No save found'); return; }
-    ensureGame().continueGame();
+    const g = ensureGame();
+    g.continueGame();
+    ui.openVehicleSelect(g);
   };
-  document.getElementById('btn-garage').onclick = () => { const g = ensureGame(); g.enterWorld(); ui.openGarage(g); };
-  document.getElementById('btn-dealerships').onclick = () => { const g = ensureGame(); g.enterWorld(); ui.openDealership(g, { name: 'All Dealerships', stock: null }); };
-  document.getElementById('btn-marketplace').onclick = () => { const g = ensureGame(); g.enterWorld(); ui.openMarketplace(g); };
-  document.getElementById('btn-jobs').onclick = () => { const g = ensureGame(); g.enterWorld(); ui.openJobs(g); };
-  document.getElementById('btn-races').onclick = () => { const g = ensureGame(); g.enterWorld(); ui.openRaces(g); };
-  document.getElementById('btn-multiplayer').onclick = () => { const g = ensureGame(); g.enterWorld(); ui.openMultiplayer(g); };
-  document.getElementById('btn-map').onclick = () => { const g = ensureGame(); g.enterWorld(); ui.openMap(g); };
-  document.getElementById('btn-achievements').onclick = () => { const g = ensureGame(); ui.openAchievements(g); };
-  document.getElementById('btn-profile').onclick = () => { const g = ensureGame(); ui.openProfile(g); };
-  document.getElementById('btn-settings').onclick = () => ui.openSettings(game);
-  document.getElementById('btn-howto').onclick = () => ui.openHowTo();
-  document.getElementById('btn-credits').onclick = () => ui.openCredits();
 }
 
 function wirePause(g) {
@@ -84,6 +80,9 @@ function wirePause(g) {
   };
   document.getElementById('btn-pause-map').onclick = () => ui.openMap(g);
   document.getElementById('btn-pause-garage').onclick = () => ui.openGarage(g);
+  document.getElementById('btn-pause-market').onclick = () => ui.openMarketplace(g);
+  document.getElementById('btn-pause-shop').onclick = () => ui.openShop(g);
+  document.getElementById('btn-pause-ranking').onclick = () => ui.openRankings(g);
   document.getElementById('btn-pause-missions').onclick = () => ui.openJobs(g);
   document.getElementById('btn-pause-mp').onclick = () => ui.openMultiplayer(g);
   document.getElementById('btn-pause-settings').onclick = () => ui.openSettings(g);
@@ -104,6 +103,9 @@ function wirePause(g) {
 
 boot().catch((err) => {
   console.error(err);
-  ui.setLoading(100, 'Loaded with fallbacks');
-  ui.hideLoading();
+  ui.setLoading(100, 'Startup error');
+  const box = document.getElementById('loading-screen');
+  const text = document.getElementById('loading-text');
+  if (text) text.innerHTML = 'CITY DRIVE could not start.<br><small>' + String(err?.message || err).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</small>';
+  if (box) box.classList.remove('hidden');
 });

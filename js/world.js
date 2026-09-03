@@ -45,7 +45,7 @@ export const POIS = {
     { id: 'nova_motors', name: 'Nova Motors', x: -50, z: 50, stock: ['metro_s', 'urban_lx', 'falcon_sport'] },
     { id: 'elite_autos', name: 'Elite Autos', x: -90, z: 70, stock: ['royal_executive', 'titan_muscle'] },
     { id: 'speed_zone', name: 'Speed Zone', x: -80, z: -20, stock: ['falcon_sport', 'vortex_x', 'titan_muscle'] },
-    { id: 'bike_hub', name: 'Bike Hub', x: 90, z: 20, stock: ['street_hawk', 'thunder_r', 'dirt_runner'] },
+    { id: 'bike_hub', name: 'Bike Hub', x: 90, z: 20, stock: ['street_hawk', 'thunder_r', 'dirt_runner', 'phantom_rr', 'apex_900', 'road_master'] },
     { id: 'offroad', name: 'Off-Road Center', x: 300, z: -200, stock: ['city_explorer', 'grand_terrain', 'mountain_beast', 'dirt_runner'] },
     { id: 'commercial', name: 'Commercial Motors', x: 70, z: -190, stock: ['cargo_king', 'city_van', 'metro_bus'] }
   ],
@@ -79,6 +79,7 @@ export class World {
     this.lights = [];
     this.trafficLights = [];
     this.timeOfDay = 10; // hours
+    this.signalTime = 0; // real-time traffic signal clock
     this.weather = 'clear';
     this.sun = null;
     this.hemi = null;
@@ -92,8 +93,94 @@ export class World {
     this._water();
     this._mountains();
     this._poiMarkers();
+    this._streetFurniture();
+    this._trafficSignals();
     this._sky();
     return this;
+  }
+
+
+  _trafficSignals() {
+    // American-style signalized intersections in the central city.
+    // Signals are visual and also expose their state to NPC traffic.
+    const poles = [-160, -80, 0, 80, 160];
+    const housing = new THREE.MeshStandardMaterial({ color: 0x20242a, metalness: 0.65, roughness: 0.3 });
+    const redMat = new THREE.MeshStandardMaterial({ color: 0x33090b, emissive: 0xff1018, emissiveIntensity: 0.05 });
+    const amberMat = new THREE.MeshStandardMaterial({ color: 0x332708, emissive: 0xffaa18, emissiveIntensity: 0.05 });
+    const greenMat = new THREE.MeshStandardMaterial({ color: 0x07330f, emissive: 0x12ff48, emissiveIntensity: 0.05 });
+    for (const x of poles) for (const z of poles) {
+      const signal = { x, z, heads: [] };
+      // Four corner poles keep the intersection readable from every approach.
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+        const px = x + sx * 9, pz = z + sz * 9;
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.15, 5.8, 8), housing);
+        pole.position.set(px, 2.9, pz); this.scene.add(pole);
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 5.8), housing);
+        arm.position.set(px, 5.65, z + sz * 3); this.scene.add(arm);
+        const head = new THREE.Group();
+        const box = new THREE.Mesh(new THREE.BoxGeometry(0.48, 1.55, 0.38), housing);
+        head.add(box);
+        const bulbs = [
+          new THREE.Mesh(new THREE.SphereGeometry(0.105, 10, 8), redMat),
+          new THREE.Mesh(new THREE.SphereGeometry(0.105, 10, 8), amberMat),
+          new THREE.Mesh(new THREE.SphereGeometry(0.105, 10, 8), greenMat)
+        ];
+        bulbs[0].position.y = 0.46; bulbs[1].position.y = 0.0; bulbs[2].position.y = -0.46;
+        bulbs.forEach(b => head.add(b));
+        head.position.set(px, 4.85, z + sz * 6.0);
+        head.rotation.y = sx < 0 ? Math.PI : 0;
+        this.scene.add(head);
+        signal.heads.push(bulbs);
+      }
+      // White zebra crosswalks on all four sides.
+      const crossMat = new THREE.MeshBasicMaterial({ color: 0xf4f4f4 });
+      for (let k = -3; k <= 3; k++) {
+        for (const side of [-1, 1]) {
+          const a = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.012, 9), crossMat);
+          a.position.set(x + k * 1.05, 0.095, z + side * 11); this.scene.add(a);
+          const b = new THREE.Mesh(new THREE.BoxGeometry(9, 0.012, 0.75), crossMat);
+          b.position.set(x + side * 11, 0.096, z + k * 1.05); this.scene.add(b);
+        }
+      }
+      this.trafficLights.push(signal);
+    }
+  }
+
+  updateTrafficSignals() {
+    for (const signal of this.trafficLights) {
+      const phase = this.signalTime % 14;
+      const ns = phase < 6.5 ? 'green' : phase < 8 ? 'yellow' : 'red';
+      const ew = phase < 6.5 ? 'red' : phase < 8 ? 'yellow' : 'green';
+      for (const bulbs of signal.heads) {
+        // Alternate heads by their physical approach: first two face north/south,
+        // last two face east/west. This keeps the visual cycle obvious.
+        const state = bulbs === signal.heads[0] || bulbs === signal.heads[1] ? ns : ew;
+        bulbs[0].material.emissiveIntensity = state === 'red' ? 2.8 : 0.03;
+        bulbs[1].material.emissiveIntensity = state === 'yellow' ? 2.6 : 0.03;
+        bulbs[2].material.emissiveIntensity = state === 'green' ? 2.8 : 0.03;
+      }
+    }
+  }
+
+  getTrafficSignalState(x, z, axis) {
+    // 14-second cycle: 6.5s green, 1.5s amber, 6s cross traffic green.
+    const phase = this.signalTime % 14;
+    const ns = phase < 6.5 ? 'green' : phase < 8 ? 'yellow' : 'red';
+    const ew = phase < 6.5 ? 'red' : phase < 8 ? 'yellow' : 'green';
+    return axis === 'z' ? ns : ew;
+  }
+
+  shouldStopTraffic(pos, axis, heading) {
+    const nearestX = Math.round(pos.x / 80) * 80;
+    const nearestZ = Math.round(pos.z / 80) * 80;
+    if (nearestX < -160 || nearestX > 160 || nearestZ < -160 || nearestZ > 160) return false;
+    const lateral = axis === 'z' ? Math.abs(pos.x - nearestX) : Math.abs(pos.z - nearestZ);
+    if (lateral > 7) return false;
+    const target = axis === 'z' ? nearestZ : nearestX;
+    const along = axis === 'z' ? (target - pos.z) * Math.cos(heading) : (target - pos.x) * Math.sin(heading);
+    if (along < -2 || along > 18) return false;
+    const state = this.getTrafficSignalState(pos.x, pos.z, axis);
+    return state !== 'green';
   }
 
   _ground() {
@@ -134,6 +221,21 @@ export class World {
     addRoad(0, -280, 18, 600, Math.PI / 2);
     addRoad(-280, 0, 18, 600);
     addRoad(0, 200, 16, 500, Math.PI / 2);
+    // Lane markings and pedestrian-scale street lighting make the city read as a real road network.
+    const dashMat = new THREE.MeshBasicMaterial({ color: 0xf5e6a6 });
+    for (let i = -4; i <= 4; i++) {
+      for (let z = -340; z < 340; z += 24) {
+        const d = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.012, 8), dashMat); d.position.set(i*80,0.085,z); this.scene.add(d);
+      }
+      for (let x = -340; x < 340; x += 24) {
+        const d = new THREE.Mesh(new THREE.BoxGeometry(8,0.012,0.18), dashMat); d.position.set(x,0.085,i*80); this.scene.add(d);
+      }
+    }
+    for (const [x,z] of [[-8,-8],[72,-8],[-8,72],[72,72],[152,72],[152,-8]]) {
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.12,5.5,8), new THREE.MeshStandardMaterial({color:0x30343c,metalness:0.7,roughness:0.3}));
+      pole.position.set(x,2.75,z); this.scene.add(pole);
+      const lamp = new THREE.PointLight(0xffdca8, 1.2, 22, 2); lamp.position.set(x,5.5,z); this.scene.add(lamp);
+    }
     // mountain dirt
     const dirt = new THREE.Mesh(
       new THREE.BoxGeometry(12, 0.06, 220),
@@ -154,6 +256,21 @@ export class World {
     m.receiveShadow = true;
     this.scene.add(m);
     this.buildings.push({ mesh: m, x, z, w, h, d });
+    // Lightweight facade detail: lit window strips make the city feel inhabited at night.
+    if (h > 8 && w > 9 && d > 9) {
+      const glass = new THREE.MeshStandardMaterial({ color: 0x8fc9e8, roughness: .18, metalness: .35, emissive: 0x214a66, emissiveIntensity: .45 });
+      const rows = Math.min(5, Math.max(2, Math.floor(h / 12)));
+      for (let row = 0; row < rows; row++) {
+        const y = 4 + row * Math.max(3.2, (h - 7) / rows);
+        const win = new THREE.Mesh(new THREE.BoxGeometry(Math.min(w*.58, 7), .72, .035), glass);
+        win.position.set(x, y, z + d/2 + .018); win.castShadow = false; this.scene.add(win);
+        const win2 = win.clone(); win2.position.z = z - d/2 - .018; this.scene.add(win2);
+      }
+      if (h > 25) {
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(w*.72, .16, d*.72), new THREE.MeshStandardMaterial({color:0x161a22,roughness:.5,metalness:.4}));
+        roof.position.set(x,h+.08,z); this.scene.add(roof);
+      }
+    }
     return m;
   }
 
@@ -224,6 +341,25 @@ export class World {
     this._block(-120, -155, 8, 6, 8, 0x884444);
   }
 
+
+  _streetFurniture() {
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a3223, roughness: .95 });
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x2d6b3d, roughness: .9 });
+    const addTree = (x,z,scale=1) => {
+      const g=new THREE.Group();
+      const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.18*scale,.25*scale,2.2*scale,8),trunkMat); trunk.position.y=1.1*scale; trunk.castShadow=true; g.add(trunk);
+      const crown=new THREE.Mesh(new THREE.IcosahedronGeometry(1.15*scale,1),leafMat); crown.position.y=2.45*scale; crown.castShadow=true; g.add(crown);
+      g.position.set(x,0,z); this.scene.add(g);
+    };
+    for (const [x,z] of [[125,25],[145,70],[185,10],[220,45],[250,120],[290,100],[330,140],[-230,210],[-270,250],[-310,190],[-340,250]]) addTree(x,z,.8+((Math.abs(x)+Math.abs(z))%5)*.07);
+    const benchMat=new THREE.MeshStandardMaterial({color:0x5b4433,roughness:.8});
+    for(const [x,z] of [[-5,18],[75,18],[145,18],[15,145]]){
+      const seat=new THREE.Mesh(new THREE.BoxGeometry(2.2,.14,.55),benchMat); seat.position.set(x,.65,z); seat.castShadow=true; this.scene.add(seat);
+      const a=seat.clone(); a.position.y=.35; a.scale.x=.12; a.scale.z=.8; this.scene.add(a);
+      const b=a.clone(); b.position.x+=1.8; this.scene.add(b);
+    }
+  }
+
   _water() {
     const water = new THREE.Mesh(
       new THREE.PlaneGeometry(900, 180),
@@ -265,7 +401,7 @@ export class World {
   _sky() {
     this.hemi = new THREE.HemisphereLight(0x9ec8ff, 0x334422, 0.6);
     this.scene.add(this.hemi);
-    this.sun = new THREE.DirectionalLight(0xfff2d8, 1.1);
+    this.sun = new THREE.DirectionalLight(0xfff2d8, 1.35);
     this.sun.position.set(80, 140, 40);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
@@ -278,7 +414,10 @@ export class World {
     this.sun.shadow.camera.top = 120;
     this.sun.shadow.camera.bottom = -120;
     this.scene.add(this.sun);
-    this.scene.fog = new THREE.Fog(0x87a0b8, 90, 620);
+    this.scene.fog = new THREE.Fog(0x87a0b8, 110, 700);
+    this.scene.background = new THREE.Color(0x8fb8d8);
+    const hemi = new THREE.HemisphereLight(0xbfe6ff, 0x24301f, 1.15);
+    this.scene.add(hemi);
     this.scene.background = new THREE.Color(0x87b0d0);
     this.scene.environment = null;
   }
@@ -330,7 +469,11 @@ export class World {
   }
 
   updateDayNight(dt, paused) {
-    if (!paused) this.timeOfDay = (this.timeOfDay + dt * 0.015) % 24;
+    if (!paused) {
+      this.timeOfDay = (this.timeOfDay + dt * 0.015) % 24;
+      this.signalTime = (this.signalTime + dt) % 14;
+    }
+    this.updateTrafficSignals();
     const t = this.timeOfDay;
     const night = t < 6 || t > 19;
     const sunset = (t > 17 && t < 19.5) || (t > 5 && t < 7);

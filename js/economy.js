@@ -3,7 +3,7 @@
  */
 
 export class Economy {
-  constructor(initialMoney = 12500) {
+  constructor(initialMoney = 20000) {
     this.money = initialMoney;
   }
 

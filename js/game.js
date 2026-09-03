@@ -11,6 +11,9 @@ import { checkAchievements } from './achievements.js';
 import { AudioSystem } from './audio.js';
 import { Settings } from './settings.js';
 import { Multiplayer, makeRoomCode } from './multiplayer.js';
+import { CAMPAIGN_MISSIONS, getCampaignMission, getDailyChallenge, getDailyDateKey } from './missions.js';
+import { SHOP_ITEMS, getShopItem } from './shop.js';
+import { getCareerScore, saveLocalRank } from './ranking.js';
 
 export class Game {
   constructor(canvas, ui) {
@@ -19,28 +22,32 @@ export class Game {
     this.clock = new THREE.Clock();
     this.paused = false;
     this.inMenu = true;
-    this.mode = 'onfoot'; // onfoot | driving
+    this.mode = 'driving'; // driving | onfoot
     this.cameraMode = 0;
     this.audio = new AudioSystem();
-    this.economy = new Economy(12500);
+    this.economy = new Economy(50000);
     this.state = this._freshState();
     this.flags = {};
     this.activeMission = null;
     this.testDrive = null;
     this.visited = new Set(['downtown']);
+    this.missionWaypoint = null;
+    // Three AI rivals accompany every campaign level and are capped before the finish.
+    this._campaignRivals = [];
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(Math.min(devicePixelRatio * 1.15, 2.5));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.12;
+    this.renderer.toneMappingExposure = 1.08;
+    this.renderer.useLegacyLights = false;
     this.renderer.shadowMap.enabled = Settings.get('graphics') !== 'low';
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.shadowMap.autoUpdate = true;
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 900);
+    this.camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 900);
     this.camera.position.set(0, 8, 16);
 
     this.world = new World(this.scene).build();
@@ -49,10 +56,15 @@ export class Game {
 
     this.playerMesh = this._createPlayer();
     this.scene.add(this.playerMesh);
+    this._applyShopAppearance();
+    // David is an optional on-foot avatar. CITY DRIVE always boots as a driving game.
+    this.playerMesh.visible = false;
 
     this.vehicleActors = [];
     this.controller = null;
     this.activeActor = null;
+    // Spawn the starter/selected car immediately so every menu path has a real vehicle.
+    this._spawnOwnedVehicles();
 
     this.rain = null;
     this.mp = new Multiplayer(this);
@@ -60,19 +72,23 @@ export class Game {
   }
 
   _freshState() {
-    const starter = cloneVehicle(getVehicleById('metro_s'), { currentFuel: 42, currentMileage: 12, isOwned: true });
+    const starter = cloneVehicle(getVehicleById('city_explorer'), { currentFuel: 70, currentMileage: 12, isOwned: true });
     return {
       player: {
         name: 'Driver',
-        money: 12500,
+        money: 50000,
         xp: 0,
         level: 1,
         distanceDriven: 0,
         jobsCompleted: 0,
         racesWon: 0,
-        missionsCompleted: 0
+        missionsCompleted: 0,
+        campaignLevel: 1,
+        campaignCompleted: [],
+        daily: { date: '', challengeId: '', completed: false, streak: 0, lastCompletedDate: '', startDistance: 0, startMoney: 50000, cashEarned: 0, districtsVisited: [] },
+        shop: { owned: ['outfit_city','shoes_city','hair_classic','accessory_none'], equipped: { outfit: 'outfit_city', shoes: 'shoes_city', hair: 'hair_classic', accessory: 'accessory_none' } }
       },
-      garage: { capacity: 5, vehicles: [starter] },
+      garage: { capacity: 8, vehicles: [starter] },
       ownedVehicleIds: [starter.vehicleUid],
       activeVehicleUid: starter.vehicleUid,
       activeVehicleId: starter.id,
@@ -85,30 +101,122 @@ export class Game {
   }
 
   _createPlayer() {
+    // David is only used after the player exits a vehicle. Keep him as a
+    // lightweight low-poly human made from standard primitives — never a
+    // capsule placeholder — so the driving start is visually car-first.
     const g = new THREE.Group();
-    const body = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.28, 0.85, 4, 8),
-      new THREE.MeshStandardMaterial({ color: 0x3366aa })
-    );
-    body.position.y = 0.95;
-    body.castShadow = true;
-    g.add(body);
+    g.name = 'David';
+
+    const skin = new THREE.MeshStandardMaterial({ color: 0x8b5a3c, roughness: 0.8 });
+    const shirt = new THREE.MeshStandardMaterial({ color: 0x244a7a, roughness: 0.72 });
+    const trousers = new THREE.MeshStandardMaterial({ color: 0x202634, roughness: 0.82 });
+    const shoes = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.9, metalness: 0.05 });
+    const hair = new THREE.MeshStandardMaterial({ color: 0x17120f, roughness: 0.95 });
+
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.72, 0.34), shirt);
+    torso.name = 'david_shirt';
+    torso.position.y = 1.15;
+    torso.castShadow = true;
+    g.add(torso);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 12, 8), skin);
+    head.position.y = 1.72;
+    head.scale.set(0.92, 1.05, 0.92);
+    head.castShadow = true;
+    g.add(head);
+
+    const hairCap = new THREE.Mesh(new THREE.SphereGeometry(0.255, 12, 6, 0, Math.PI * 2, 0, Math.PI * 0.48), hair);
+    hairCap.name = 'david_hair';
+    hairCap.position.y = 1.78;
+    hairCap.castShadow = true;
+    g.add(hairCap);
+
+    for (const x of [-0.18, 0.18]) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.62, 0.22), trousers);
+      leg.name = 'david_trousers';
+      leg.position.set(x, 0.52, 0);
+      leg.castShadow = true;
+      g.add(leg);
+      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.12, 0.34), shoes);
+      shoe.name = 'david_shoe';
+      shoe.position.set(x, 0.17, 0.04);
+      shoe.castShadow = true;
+      g.add(shoe);
+    }
+
+    for (const x of [-0.42, 0.42]) {
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.62, 0.18), shirt);
+      arm.position.set(x, 1.16, 0);
+      arm.rotation.z = x < 0 ? 0.08 : -0.08;
+      arm.castShadow = true;
+      g.add(arm);
+      const hand = new THREE.Mesh(new THREE.SphereGeometry(0.105, 10, 7), skin);
+      hand.position.set(x, 0.84, 0);
+      hand.castShadow = true;
+      g.add(hand);
+    }
+
+    const chain = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.018, 6, 24, Math.PI * 1.65), new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9, roughness: 0.22 }));
+    chain.name = 'david_accessory_chain';
+    chain.rotation.x = Math.PI / 2;
+    chain.position.set(0, 1.38, 0.19);
+    chain.visible = false;
+    g.add(chain);
+    const shades = new THREE.Group();
+    shades.name = 'david_accessory_shades';
+    const lensMat = new THREE.MeshStandardMaterial({ color: 0x111827, metalness: 0.35, roughness: 0.25 });
+    const lensL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.055, 0.025), lensMat);
+    const lensR = lensL.clone();
+    lensL.position.x = -0.095; lensR.position.x = 0.095;
+    shades.add(lensL, lensR);
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.025, 0.025), lensMat);
+    shades.add(bridge);
+    shades.position.set(0, 1.73, 0.225);
+    shades.visible = false;
+    g.add(shades);
+
     g.position.set(42, 0, -52);
     return g;
   }
 
+  _resetSessionRuntime() {
+    if (this._tdTimer) { clearTimeout(this._tdTimer); this._tdTimer = null; }
+    this.testDrive = null;
+    this.activeMission = null;
+    this._clearMissionWaypoint();
+    this._clearRoute();
+    this._clearRaceMarkers();
+    this._clearCampaignRivals();
+    this._clearRaceAI();
+    if (this.mp?.active) this.mp.end();
+    this.activeActor = null;
+    this.controller = null;
+    this.mode = 'driving';
+    this.flags = {};
+    this._lowFuelWarned = false;
+    this._saveTimer = 0;
+    this._jumping = false;
+    this.playerMesh.visible = false;
+  }
+
   startNew(name = 'Driver') {
+    this._resetSessionRuntime();
+    this.isNewGameSession = true;
     this.state = this._freshState();
     this.state.player.name = name || 'Driver';
     this.economy.money = this.state.player.money;
+    this._ensureDailyChallenge();
+    this.visited = new Set(this.state.visitedDistricts || ['downtown']);
     this._spawnOwnedVehicles();
     this.enterWorld(true);
     saveGame(this._savePayload());
   }
 
   continueGame() {
+    this.isNewGameSession = false;
     const data = loadGame();
     if (!data) { this.startNew(); return; }
+    this._resetSessionRuntime();
     this.state.player = { ...this.state.player, ...data.player };
     this.state.garage = data.garage || this.state.garage;
     (this.state.garage.vehicles || []).forEach(v => {
@@ -123,8 +231,23 @@ export class Game {
     this.state.achievements = data.achievements || {};
     this.state.completedJobs = data.completedJobs || [];
     this.state.completedRaces = data.completedRaces || [];
-    this.state.visitedDistricts = data.visitedDistricts || [];
+    const loadedCampaignLevel = Number(data.player?.campaignLevel);
+    this.state.player.campaignLevel = Number.isFinite(loadedCampaignLevel) ? Math.trunc(loadedCampaignLevel) : 1;
+    this.state.player.campaignCompleted = Array.isArray(data.player?.campaignCompleted) ? data.player.campaignCompleted.filter(n => Number.isInteger(Number(n)) && Number(n) >= 1 && Number(n) <= CAMPAIGN_MISSIONS.length).map(Number) : [];
+    this.state.player.campaignLevel = Math.min(CAMPAIGN_MISSIONS.length, Math.max(1, this.state.player.campaignLevel));
+    this.state.player.daily = { ...(this.state.player.daily || {}), ...(data.player?.daily || {}) };
+    if (!Array.isArray(this.state.player.daily.districtsVisited)) this.state.player.daily.districtsVisited = [];
+    const dailyCash = Number(this.state.player.daily.cashEarned);
+    this.state.player.daily.cashEarned = Number.isFinite(dailyCash) && dailyCash >= 0 ? dailyCash : 0;
+    this.state.player.shop = { owned: ['outfit_city','shoes_city','hair_classic','accessory_none'], equipped: { outfit:'outfit_city', shoes:'shoes_city', hair:'hair_classic', accessory:'accessory_none' }, ...(this.state.player.shop || {}), ...(data.player?.shop || {}), equipped: { ...(this.state.player.shop?.equipped || {}), ...(data.player?.shop?.equipped || {}) } };
+    this._rankId = data.player?.rankId || this._rankId || null;
+    this.state.player.shop.owned = Array.isArray(this.state.player.shop.owned) ? this.state.player.shop.owned : ['outfit_city','shoes_city','hair_classic','accessory_none'];
+    this.state.player.shop.equipped = { outfit:'outfit_city', shoes:'shoes_city', hair:'hair_classic', accessory:'accessory_none', ...(this.state.player.shop.equipped || {}) };
+    this._applyShopAppearance();
+    this.state.visitedDistricts = Array.isArray(data.visitedDistricts) && data.visitedDistricts.length ? data.visitedDistricts : ['downtown'];
+    this.visited = new Set(this.state.visitedDistricts);
     this.economy.money = this.state.player.money;
+    this._ensureDailyChallenge();
     this._spawnOwnedVehicles();
     this.enterWorld(true);
     this.persist();
@@ -132,6 +255,8 @@ export class Game {
 
   _savePayload() {
     this.state.player.money = this.economy.money;
+    this.state.player.rankId = this._rankId || this.state.player.rankId || null;
+    saveLocalRank(this.state);
     this.state.player.level = levelFromXp(this.state.player.xp);
     this.state.garage.vehicles = (this.state.garage.vehicles || []).filter(v => v && v.isOwned && !v.isTestDrive);
     this.state.ownedVehicleIds = this.state.garage.vehicles.map(v => v.vehicleUid);
@@ -142,8 +267,24 @@ export class Game {
     saveGame(this._savePayload());
   }
 
+  _disposeObject3D(root) {
+    if (!root) return;
+    root.traverse(obj => {
+      if (obj.geometry?.dispose) obj.geometry.dispose();
+      const materials = Array.isArray(obj.material) ? obj.material : (obj.material ? [obj.material] : []);
+      materials.forEach(mat => {
+        if (mat?.map?.dispose) mat.map.dispose();
+        if (mat?.normalMap?.dispose) mat.normalMap.dispose();
+        if (mat?.roughnessMap?.dispose) mat.roughnessMap.dispose();
+        if (mat?.metalnessMap?.dispose) mat.metalnessMap.dispose();
+        if (mat?.emissiveMap?.dispose) mat.emissiveMap.dispose();
+        if (mat?.dispose) mat.dispose();
+      });
+    });
+  }
+
   _spawnOwnedVehicles() {
-    for (const a of this.vehicleActors) this.scene.remove(a.mesh);
+    for (const a of this.vehicleActors) { this.scene.remove(a.mesh); this._disposeObject3D(a.mesh); }
     this.vehicleActors = [];
     const list = (this.state.garage.vehicles || []).filter(v => v && v.isOwned !== false && !v.isTestDrive);
     this.state.garage.vehicles = list;
@@ -160,6 +301,72 @@ export class Game {
     if (this.state.activeVehicleUid) {
       this.activeActor = this.vehicleActors.find(a => a.def.vehicleUid === this.state.activeVehicleUid) || this.activeActor;
     }
+    if (this.activeActor) {
+      this.state.activeVehicleUid = this.activeActor.def.vehicleUid;
+      this.state.activeVehicleId = this.activeActor.def.id;
+    }
+  }
+
+  previewVehicle(def) {
+    if (!def) return;
+    this.inMenu = true;
+    this.mode = 'driving';
+    this.controller = null;
+    this.playerMesh.visible = false;
+    if (this._menuPreviewMesh) { this.scene.remove(this._menuPreviewMesh); this._disposeObject3D(this._menuPreviewMesh); this._menuPreviewMesh = null; }
+    const mesh = createVehicleMesh(def);
+    mesh.position.set(0, 0.05, 0);
+    mesh.rotation.y = Math.PI;
+    this.scene.add(mesh);
+    this._menuPreviewMesh = mesh;
+    this._menuPreviewDef = def;
+    this.camera.position.set(8.5, 3.7, 10.5);
+    this.camera.lookAt(0, 1.0, 0);
+    this.ui.showGame();
+    this.ui.setVehicleSelectionMode(true);
+  }
+
+  setStartingCash(amount) {
+    if (!this.isNewGameSession) {
+      this.ui.toast('Starting cash can only be changed for a NEW GAME');
+      return false;
+    }
+    const value = amount === 50000 ? 50000 : 20000;
+    this.state.player.money = value;
+    this.economy.money = value;
+    if (this.state.player.daily) { this.state.player.daily.startMoney = value; this.state.player.daily.cashEarned = 0; this.state.player.daily.startDistance = this.state.player.distanceDriven || 0; }
+    this.persist();
+    this.ui.toast(`Starting cash set to ${this.economy.format(value)}`);
+    return true;
+  }
+
+  driveSelectedVehicle(def) {
+    if (!def) return false;
+    if (this._menuPreviewMesh) { this.scene.remove(this._menuPreviewMesh); this._menuPreviewMesh = null; }
+    const owned = (this.state.garage.vehicles || []).find(v => v && v.isOwned !== false && v.id === def.id);
+    if (owned) {
+      this.state.activeVehicleUid = owned.vehicleUid;
+      this.state.activeVehicleId = owned.id;
+      this._spawnOwnedVehicles();
+      const actor = this.findActorByUid(owned.vehicleUid);
+      if (actor) this.enterVehicle(actor);
+      this.inMenu = false;
+      this.ui.setVehicleSelectionMode(false);
+      this.startCampaignMission();
+      return true;
+    }
+    if (!this.buyVehicle(def.id)) return false;
+    const bought = (this.state.garage.vehicles || []).find(v => v && v.id === def.id);
+    if (!bought) return false;
+    this.state.activeVehicleUid = bought.vehicleUid;
+    this.state.activeVehicleId = bought.id;
+    this._spawnOwnedVehicles();
+    const actor = this.findActorByUid(bought.vehicleUid);
+    if (actor) this.enterVehicle(actor);
+    this.inMenu = false;
+    this.ui.setVehicleSelectionMode(false);
+    this.startCampaignMission();
+    return true;
   }
 
   findActorByUid(uid) {
@@ -168,15 +375,25 @@ export class Game {
 
   enterWorld(startInVehicle = true) {
     this.inMenu = false;
+    // Never expose the on-foot placeholder on world entry. If vehicles were not spawned yet, create them now.
+    if (!this.activeActor) this._spawnOwnedVehicles();
     this.paused = false;
     // Start directly in the player's owned vehicle so the game opens as a driving game.
-    this.mode = startInVehicle && this.activeActor ? 'driving' : 'onfoot';
+    this.mode = this.activeActor ? 'driving' : 'onfoot';
     this.controller = this.mode === 'driving' ? this.activeActor.ctrl : null;
     this.playerMesh.visible = this.mode !== 'driving';
     if (this.mode === 'driving') {
       this.controller.speed = 0;
       this.controller.heading = this.activeActor.mesh.rotation.y;
       this.controller.lastPos.copy(this.activeActor.mesh.position);
+      // Snap the camera to the selected car on first entry so no capsule frame is shown.
+      const h = this.controller.heading;
+      this.camera.position.set(
+        this.activeActor.mesh.position.x - Math.sin(h) * 8.5,
+        this.activeActor.mesh.position.y + 3.2,
+        this.activeActor.mesh.position.z - Math.cos(h) * 8.5
+      );
+      this.camera.lookAt(this.activeActor.mesh.position.x, this.activeActor.mesh.position.y + 1.1, this.activeActor.mesh.position.z);
     }
     this.ui.showGame();
     this.audio.resume();
@@ -191,7 +408,11 @@ export class Game {
   _loop = () => {
     requestAnimationFrame(this._loop);
     const dt = Math.min(0.05, this.clock.getDelta());
-    if (this.inMenu) return;
+    if (this.inMenu) {
+      if (this._menuPreviewMesh) this._menuPreviewMesh.rotation.y += dt * 0.28;
+      this.render();
+      return;
+    }
     if (this.paused) {
       if (this.ui.input.consumePause()) this.ui.togglePause(this);
       this.render();
@@ -241,9 +462,10 @@ export class Game {
       this.flags.drove = true;
       if (kmh >= 200) this.flags.speed200 = true;
       if (this.controller.def.isMotorcycle) this.flags.bike = true;
-      this.audio.updateEngine(kmh, this.controller.throttle, true);
+      this.audio.updateEngine(kmh, this.controller.throttle, true, this.controller.def);
 
       this._missionUpdate(dt);
+      this._updateDailyChallenge();
       const interacted = this._poiPrompts(this.controller.mesh.position);
       if (!interacted && input.consumeEnter()) this.exitVehicle();
     } else {
@@ -252,6 +474,8 @@ export class Game {
       const interacted = this._poiPrompts(this.playerMesh.position);
       if (!interacted && input.consumeEnter()) this._tryEnter();
     }
+
+    if (this.mode !== 'driving') this._updateDailyChallenge();
 
     const driving = this.mode === 'driving' && this.controller;
     const pos = driving ? this.controller.mesh.position : this.playerMesh.position;
@@ -264,6 +488,8 @@ export class Game {
     this.visited.add(d.id);
     this.state.visitedDistricts = [...this.visited];
 
+    this._updateCampaignRivals(dt);
+
     if (this._raceAI && this.activeMission?.kind === 'race') {
       for (const bot of this._raceAI) {
         const cp = this.activeMission.checkpoints[bot.cp];
@@ -274,7 +500,9 @@ export class Game {
         bot.mesh.position.x += (dx / d) * bot.speed * dt;
         bot.mesh.position.z += (dz / d) * bot.speed * dt;
         bot.mesh.rotation.y = Math.atan2(dx / d, dz / d);
-        if (d < 8) bot.cp++;
+        // Legacy multiplayer race AI is retained, but never advances through the
+        // final checkpoint before the human player.
+        if (bot.cp < this.activeMission.checkpoints.length - 1 && d < 8) bot.cp++;
       }
     }
 
@@ -290,6 +518,7 @@ export class Game {
     const newly = checkAchievements(this.state, this.flags);
     newly.forEach(a => this.ui.toast(`Achievement: ${a.name}`));
 
+    this._updateRouteProgress();
     this._updateCamera(dt);
     this.ui.updateHUD(this);
     if (this._saveTimer === undefined) this._saveTimer = 0;
@@ -353,6 +582,7 @@ export class Game {
   }
 
   enterVehicle(actor) {
+    this.inMenu = false;
     this.activeActor = actor;
     this.controller = actor.ctrl;
     this.mode = 'driving';
@@ -381,87 +611,353 @@ export class Game {
     const nearDeal = this.world.nearestPOI(pos.x, pos.z, POIS.dealerships, 10);
     const nearJob = this.world.nearestPOI(pos.x, pos.z, POIS.jobs, 9);
     const nearRace = this.world.nearestPOI(pos.x, pos.z, POIS.races, 9);
+    const nearV = this.mode === 'onfoot' ? this.vehicleActors.find(a => !a.temp && a.mesh.position.distanceTo(this.playerMesh.position) < 6) : null;
 
-    if (nearFuel) this.ui.prompt('E — FULL REFUEL  ·  R — +10L');
+    if (nearFuel && this.controller) this.ui.prompt('E — REFUEL + NITRO  ·  R +10L');
     else if (nearGarage) this.ui.prompt('E — GARAGE');
-    else if (nearRepair) this.ui.prompt('E — REPAIR');
+    else if (nearRepair && this.controller) this.ui.prompt('E — REPAIR');
     else if (nearDeal) this.ui.prompt(`E — ${nearDeal.name}`);
-    else if (nearJob) this.ui.prompt(`E — ${nearJob.name}`);
-    else if (nearRace) this.ui.prompt(`E — ${nearRace.name}`);
-    else if (this.mode === 'onfoot') {
-      const nearV = this.vehicleActors.some(a => a.mesh.position.distanceTo(this.playerMesh.position) < 6);
-      this.ui.prompt(nearV ? 'E — ENTER VEHICLE' : '');
-    } else this.ui.prompt(this.mode === 'driving' ? '' : '');
+    else if (nearJob && this.controller) this.ui.prompt(`E — ${nearJob.name}`);
+    else if (nearRace && this.controller) this.ui.prompt(`E — ${nearRace.name}`);
+    else if (nearV) this.ui.prompt('E — ENTER VEHICLE');
+    else this.ui.prompt('');
 
-    if (this.ui.input.consumeEnter()) {
-      if (nearFuel && this.controller) {
-        if (this.ui.input.held.has('KeyR')) this.refuelPartial(10);
-        else this._refuel();
-        return true;
-      }
-      if (nearGarage) { this.ui.openGarage(this); return true; }
-      if (nearRepair && this.controller) { this._repair(); return true; }
-      if (nearDeal) { this.ui.openDealership(this, nearDeal); return true; }
-      if (nearJob) { this.startJob(nearJob); return true; }
-      if (nearRace) { this.startRace(nearRace); return true; }
+    // Only consume E when there is an actual interaction. This preserves E
+    // for vehicle exit/vehicle entry when no POI is being used.
+    const canInteract = !!(nearFuel && this.controller) || !!nearGarage || !!(nearRepair && this.controller) || !!nearDeal || !!(nearJob && this.controller) || !!(nearRace && this.controller) || !!nearV;
+    if (!canInteract || !this.ui.input.consumeEnter()) return false;
+
+    if (nearFuel && this.controller) {
+      if (this.ui.input.held.has('KeyR')) this.refuelPartial(10);
+      else this._refuel();
+      return true;
     }
+    if (nearGarage) { this.ui.openGarage(this); return true; }
+    if (nearRepair && this.controller) { this._repair(); return true; }
+    if (nearDeal) { this.ui.openDealership(this, nearDeal); return true; }
+    if (nearJob && this.controller) { this.startJob(nearJob); return true; }
+    if (nearRace && this.controller) { this.startRace(nearRace); return true; }
+    if (nearV) { this.enterVehicle(nearV); return true; }
     return false;
+  }
+
+  refuelVehicle(v, liters = null) {
+    if (!v) return false;
+    const need = Math.max(0, v.fuelCapacity - (v.currentFuel || 0));
+    const add = Math.min(need, liters == null ? need : Math.max(0, liters));
+    if (add <= 0.001) { this.ui.toast('FUEL TANK ALREADY FULL'); return false; }
+    const cost = Math.max(1, Math.round(add * 2.4));
+    if (!this.economy.canAfford(cost)) { this.ui.toast('INSUFFICIENT FUNDS'); return false; }
+    this.economy.spend(cost);
+    v.currentFuel = Math.min(v.fuelCapacity, (v.currentFuel || 0) + add);
+    if (this.controller?.def === v) this.controller.refillNitro();
+    this.persist();
+    this.ui.toast(`REFUELED ${add.toFixed(1)}L — ${this.economy.format(cost)}`);
+    return true;
   }
 
   _refuel() {
     const v = this.controller.def;
-    const need = v.fuelCapacity - (v.currentFuel || 0);
-    const cost = Math.round(need * 2.4);
+    const cap = Math.max(0, Number(v.fuelCapacity) || 0);
+    const current = Math.min(cap, Math.max(0, Number(v.currentFuel) || 0));
+    const need = Math.max(0, cap - current);
+    const nitroCap = Math.max(0, Number(v.nitroCapacity) || 0) + ((v.upgrades?.nitro || 0) * 15);
+    const nitroNeed = Math.max(0, nitroCap - Math.max(0, Number(this.controller.nitroAmount) || 0));
+    if (need <= 0.001 && nitroNeed <= 0.001) { this.ui.toast('FUEL & NITRO ALREADY FULL'); return; }
+    const fuelCost = Math.round(need * 2.4);
+    const nitroCost = Math.round(nitroNeed * 1.8);
+    const cost = Math.max(1, fuelCost + nitroCost);
     if (!this.economy.canAfford(cost)) { this.ui.toast('INSUFFICIENT FUNDS'); return; }
     this.economy.spend(cost);
     this.controller.refuel();
     this.controller.refillNitro();
-    this.ui.toast(`FULL REFUEL — ${this.economy.format(cost)}`);
+    this.ui.toast(`REFUELED + NITRO — ${this.economy.format(cost)}`);
     this.persist();
   }
 
   refuelPartial(liters) {
     if (!this.controller) return;
     const v = this.controller.def;
-    const add = Math.min(liters, v.fuelCapacity - (v.currentFuel || 0));
-    const cost = Math.round(add * 2.4);
+    const cap = Math.max(0, Number(v.fuelCapacity) || 0);
+    const current = Math.min(cap, Math.max(0, Number(v.currentFuel) || 0));
+    const add = Math.min(Math.max(0, Number(liters) || 0), Math.max(0, cap - current));
+    if (add <= 0.001) { this.ui.toast('FUEL TANK ALREADY FULL'); return; }
+    const cost = Math.max(1, Math.round(add * 2.4));
     if (!this.economy.canAfford(cost)) { this.ui.toast('INSUFFICIENT FUNDS'); return; }
     this.economy.spend(cost);
     this.controller.refuel(add);
-    this.ui.toast(`PARTIAL REFUEL +${add.toFixed(1)}L — ${this.economy.format(cost)}`);
+    this.controller.refillNitro();
+    this.ui.toast(`PARTIAL REFUEL +${add.toFixed(1)}L + NITRO — ${this.economy.format(cost)}`);
     this.persist();
   }
 
   _repair() {
+    if (!this.controller) return false;
     const v = this.controller.def;
     const dmg = 100 - (v.currentCondition || 100);
     const cost = Math.round(dmg * 18 + 40);
-    if (dmg < 1) { this.ui.toast('Vehicle is already in excellent condition'); return; }
-    if (!this.economy.canAfford(cost)) { this.ui.toast('INSUFFICIENT FUNDS'); return; }
+    if (dmg < 1) { this.ui.toast('Vehicle is already in excellent condition'); return false; }
+    if (!this.economy.canAfford(cost)) { this.ui.toast('INSUFFICIENT FUNDS'); return false; }
     this.economy.spend(cost);
     this.controller.repair(true);
     this.ui.toast(`Repaired — ${this.economy.format(cost)}`);
     this.persist();
+    return true;
   }
 
-  startJob(job) {
+  repairVehicle(v) {
+    if (!v) return false;
+    const dmg = Math.max(0, 100 - Number(v.currentCondition ?? 100));
+    if (dmg < 1) { this.ui.toast('Vehicle is already in excellent condition'); return false; }
+    const cost = Math.max(40, Math.round(dmg * 18 + 40));
+    if (!this.economy.canAfford(cost)) { this.ui.toast('INSUFFICIENT FUNDS'); return false; }
+    this.economy.spend(cost);
+    v.currentCondition = 100;
+    const actor = this.vehicleActors.find(a => a.def === v);
+    actor?.ctrl?.repair(true);
+    this.ui.toast(`Repaired ${v.name} — ${this.economy.format(cost)}`);
+    this.persist();
+    return true;
+  }
+
+  _buildRoute(start, dest) {
+    const snap = (v) => Math.round(v / 80) * 80;
+    const sx = snap(start.x), sz = snap(start.z), dx = snap(dest.x), dz = snap(dest.z);
+    const a = [{ x: start.x, z: start.z }, { x: sx, z: sz }, { x: dx, z: sz }, { x: dx, z: dz }, { x: dest.x, z: dest.z }];
+    const b = [{ x: start.x, z: start.z }, { x: sx, z: sz }, { x: sx, z: dz }, { x: dx, z: dz }, { x: dest.x, z: dest.z }];
+    const score = r => r.reduce((n, p, i) => i ? n + Math.hypot(p.x-r[i-1].x, p.z-r[i-1].z) : 0, 0);
+    return (score(a) <= score(b) ? a : b).filter((p,i,r) => i === 0 || Math.hypot(p.x-r[i-1].x,p.z-r[i-1].z) > 1);
+  }
+
+  _setRoute(start, dest, color=0x00d4ff) {
+    return this._setRoutePoints(this._buildRoute(start, dest), color);
+  }
+
+  _setRoutePoints(points, color=0x00d4ff) {
+    this._clearRoute();
+    const route = (points || []).map(p => ({x:Number(p.x), z:Number(p.z)})).filter(p => Number.isFinite(p.x) && Number.isFinite(p.z));
+    if (route.length < 2) return route;
+    this.activeRoute = route;
+    const pts = route.map(p => new THREE.Vector3(p.x, 0.13, p.z));
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color, transparent:true, opacity:.72 }));
+    line.renderOrder = 4;
+    this.scene.add(line);
+    this.routeLine = line;
+    return route;
+  }
+
+  _clearRoute() {
+    if (this.routeLine) { this.routeLine.geometry.dispose(); this.routeLine.material.dispose(); this.scene.remove(this.routeLine); }
+    this.routeLine = null;
+    this.activeRoute = null;
+  }
+
+  _updateRouteProgress() {
+    if (!this.routeLine || !this.activeMission || !this.controller) return;
+    const p = this.controller.mesh.position;
+    const route = this.activeRoute || [];
+    if (route.length < 2) return;
+    let nearest = 1, best = Infinity;
+    for (let i=1;i<route.length;i++) { const d=Math.hypot(route[i].x-p.x,route[i].z-p.z); if(d<best){best=d;nearest=i;} }
+    const points = [{x:p.x,z:p.z}, ...route.slice(nearest)];
+    this.routeLine.geometry.dispose();
+    this.routeLine.geometry = new THREE.BufferGeometry().setFromPoints(points.map(q=>new THREE.Vector3(q.x,.13,q.z)));
+  }
+
+  setGPSDestination(dest) {
+    if (!dest || !Number.isFinite(Number(dest.x)) || !Number.isFinite(Number(dest.z))) return false;
+    const start = this.mode === 'driving' && this.controller?.mesh ? this.controller.mesh.position : this.playerMesh.position;
+    const dist = Math.hypot(Number(dest.x) - start.x, Number(dest.z) - start.z) / 100;
+    this.activeMission = {
+      kind: 'gps',
+      type: 'gps',
+      name: 'GPS',
+      dest: { name: String(dest.name || 'Destination'), x: Number(dest.x), z: Number(dest.z) },
+      startDamage: this.controller?.def.currentCondition ?? 100,
+      startTime: performance.now(),
+      dist
+    };
+    this._setRoute(start, {x:Number(dest.x), z:Number(dest.z)}, 0x00d4ff);
+    this._setMissionWaypoint(Number(dest.x), Number(dest.z), 0x00d4ff);
+    this.ui.toast(`GPS SET → ${dest.name || 'Destination'}`);
+    this.audio.checkpoint();
+    return true;
+  }
+
+  _ensureDailyChallenge() {
+    const key = getDailyDateKey();
+    const challenge = getDailyChallenge();
+    const d = this.state.player.daily || {};
+    if (d.date !== key || d.challengeId !== challenge.id) {
+      const yesterday = new Date(Date.now() - 86400000);
+      const yesterdayKey = getDailyDateKey(yesterday);
+      const keepStreak = d.lastCompletedDate === yesterdayKey;
+      this.state.player.daily = {
+        date: key, challengeId: challenge.id, completed: false,
+        streak: keepStreak ? Number(d.streak || 0) : (d.lastCompletedDate === key ? Number(d.streak || 0) : 0),
+        lastCompletedDate: d.lastCompletedDate || '',
+        cashEarned: 0,
+        startDistance: Number(this.state.player.distanceDriven || 0),
+        startMoney: Number(this.economy?.money ?? this.state.player.money ?? 0),
+        districtsVisited: []
+      };
+    }
+  }
+
+  _updateDailyChallenge() {
+    this._ensureDailyChallenge();
+    const d = this.state.player.daily;
+    if (d.completed) return;
+    const c = getDailyChallenge();
+    const distance = Math.max(0, (this.state.player.distanceDriven || 0) - (d.startDistance || 0));
+    const earned = Math.max(0, Number(d.cashEarned || 0));
+    if (!Array.isArray(d.districtsVisited)) d.districtsVisited = [];
+    const currentDistrict = this.mode === 'driving' && this.controller ? this.world.getDistrict(this.controller.mesh.position.x, this.controller.mesh.position.z)?.id : null;
+    if (currentDistrict && !d.districtsVisited.includes(currentDistrict)) d.districtsVisited.push(currentDistrict);
+    const districts = d.districtsVisited.length;
+    const speed = this.controller ? Math.abs(this.controller.speed) * 3.6 : 0;
+    const value = c.id === 'distance' ? distance : c.id === 'cash' ? earned : c.id === 'districts' ? districts : speed;
+    if (value < c.target) return;
+    d.completed = true;
+    d.streak = Number(d.streak || 0) + 1;
+    d.lastCompletedDate = d.date;
+    const streakBonus = Math.min(2500, d.streak * 250);
+    const reward = c.reward + streakBonus;
+    this._earn(reward);
+    this.state.player.xp += c.xp;
+    this.state.player.level = levelFromXp(this.state.player.xp);
+    this.audio.success();
+    this.ui.toast(`DAILY CHALLENGE COMPLETE! +${this.economy.format(reward)} • ${d.streak} DAY STREAK`);
+    this.persist();
+  }
+
+  getDailyChallengeStatus() {
+    this._ensureDailyChallenge();
+    const d = this.state.player.daily;
+    const c = getDailyChallenge();
+    const distance = Math.max(0, (this.state.player.distanceDriven || 0) - (d.startDistance || 0));
+    const earned = Math.max(0, Number(d.cashEarned || 0));
+    if (!Array.isArray(d.districtsVisited)) d.districtsVisited = [];
+    const currentDistrict = this.mode === 'driving' && this.controller ? this.world.getDistrict(this.controller.mesh.position.x, this.controller.mesh.position.z)?.id : null;
+    if (currentDistrict && !d.districtsVisited.includes(currentDistrict)) d.districtsVisited.push(currentDistrict);
+    const districts = d.districtsVisited.length;
+    const speed = this.controller ? Math.abs(this.controller.speed) * 3.6 : 0;
+    const value = c.id === 'distance' ? distance : c.id === 'cash' ? earned : c.id === 'districts' ? districts : speed;
+    return { ...c, value, completed: !!d.completed, streak: Number(d.streak || 0) };
+  }
+
+  getCampaignMission() {
+    return getCampaignMission(this.state.player.campaignLevel || 1);
+  }
+
+  startCampaignMission() {
+    const m = this.getCampaignMission();
+    if (!m || this.mode !== 'driving' || !this.controller) return false;
+    if ((this.state.player.campaignCompleted || []).includes(m.level)) {
+      this.ui.toast('CAMPAIGN COMPLETE — ALL 20 LEVELS FINISHED');
+      return false;
+    }
+    this._clearRoute();
+    if (m.type === 'drive') {
+      const dest = LANDMARKS.find(x => x.id === m.dest);
+      if (!dest) return false;
+      const p = this.controller.mesh.position;
+      this.activeMission = { kind: 'campaign', campaignType: 'drive', campaign: m, name: `LEVEL ${m.level} — ${m.title}`, dest, startTime: performance.now(), dist: Math.hypot(dest.x - p.x, dest.z - p.z) / 100 };
+      this._setRoute(p, dest, 0xffcc33);
+      this._setMissionWaypoint(dest.x, dest.z, 0xffcc33);
+    } else if (m.type === 'job') {
+      const job = POIS.jobs.find(j => j.type === m.job);
+      if (!job) return false;
+      return this.startJob(job, { campaign: m });
+    } else if (m.type === 'race') {
+      const race = POIS.races.find(r => r.id === m.race);
+      if (!race) return false;
+      return this.startRace(race, { campaign: m });
+    } else {
+      this.activeMission = { kind: 'campaign', campaignType: m.type, campaign: m, name: `LEVEL ${m.level} — ${m.title}`, startTime: performance.now() };
+    }
+    this._spawnCampaignRivals();
+    this.ui.toast(`LEVEL ${m.level}: ${m.objective}`);
+    this.audio.checkpoint();
+    return true;
+  }
+
+  _earn(amount) {
+    const value = Math.max(0, Math.round(Number(amount) || 0));
+    if (!value) return 0;
+    this.economy.earn(value);
+    const d = this.state.player.daily;
+    if (d && !d.completed) d.cashEarned = Math.max(0, Number(d.cashEarned || 0)) + value;
+    return value;
+  }
+
+  _completeCampaignMission() {
+    const m = this.getCampaignMission();
+    if (!m || this.activeMission?.campaign?.level !== m.level) return;
+    if ((this.state.player.campaignCompleted || []).includes(m.level)) {
+      this.activeMission = null;
+      this._clearMissionWaypoint();
+      this._clearRoute();
+      return;
+    }
+    if (!Array.isArray(this.state.player.campaignCompleted)) this.state.player.campaignCompleted = [];
+    this.state.player.campaignCompleted.push(m.level);
+    this.state.player.missionsCompleted++;
+    this._earn(m.reward);
+    this.state.player.xp += m.xp;
+    this.state.player.level = levelFromXp(this.state.player.xp);
+    const next = getCampaignMission(m.level + 1);
+    this.activeMission = null;
+    this._clearMissionWaypoint();
+    this._clearRoute();
+    this._clearCampaignRivals();
+    this.audio.success();
+    if (next) {
+      this.state.player.campaignLevel = next.level;
+      this.ui.toast(`LEVEL ${m.level} COMPLETE! +${this.economy.format(m.reward)} +${m.xp} XP`);
+      setTimeout(() => {
+        if (!this.activeMission && this.mode === 'driving' && this.controller) this.startCampaignMission();
+      }, 900);
+    } else {
+      this.state.player.campaignLevel = m.level;
+      this.ui.toast(`CAMPAIGN COMPLETE! +${this.economy.format(m.reward)} +${m.xp} XP`);
+    }
+    this.persist();
+  }
+
+  startJob(job, opts = {}) {
+    if (!job || this.mode !== 'driving' || !this.controller) { this.ui.toast('You must be driving to start a job'); return false; }
+    if (!opts.campaign && this.activeMission?.kind === 'campaign') { this.ui.toast('FINISH THE CURRENT CAMPAIGN LEVEL FIRST'); return false; }
     const dest = LANDMARKS[Math.floor(Math.random() * LANDMARKS.length)];
     const start = this.mode === 'driving' ? this.controller.mesh.position : this.playerMesh.position;
     const dist = Math.hypot(dest.x - start.x, dest.z - start.z) / 100;
     this.activeMission = {
-      kind: 'job',
+      kind: opts.campaign ? 'campaign' : 'job',
+      campaignType: opts.campaign ? 'job' : null,
+      campaign: opts.campaign || null,
       type: job.type,
-      name: job.name,
+      name: opts.campaign ? `LEVEL ${opts.campaign.level} — ${opts.campaign.title}` : job.name,
       dest,
       startDamage: this.controller?.def.currentCondition ?? 100,
       startTime: performance.now(),
       dist
     };
-    this.ui.toast(`${job.name} started → ${dest.name}`);
+    this._setRoute(this.controller.mesh.position, dest, 0xffcc33);
+    this._setMissionWaypoint(dest.x, dest.z, 0xffcc33);
+    if (opts.campaign) this._spawnCampaignRivals();
+    this.ui.toast(`MISSION STARTED → ${dest.name}`);
     this.audio.checkpoint();
+    return true;
   }
 
   startRace(race, opts = {}) {
+    if (!race || this.mode !== 'driving' || !this.controller) { this.ui.toast('You must be driving to start a race'); return false; }
+    if (!opts.campaign && this.activeMission?.kind === 'campaign') { this.ui.toast('FINISH THE CURRENT CAMPAIGN LEVEL FIRST'); return false; }
+    if (opts.campaign?.race === 'bike' && !this.controller.def.isMotorcycle) { this.ui.toast('This campaign race requires a motorcycle'); return false; }
+    this._clearRaceAI();
+    this._clearRaceMarkers();
+    this._clearMissionWaypoint();
     const checkpoints = opts.checkpoints || [];
     if (!checkpoints.length) {
       for (let i = 0; i < 5; i++) {
@@ -471,8 +967,8 @@ export class Game {
         });
       }
     }
-    this._clearRaceMarkers();
     this._spawnRaceMarkers(checkpoints);
+    this._setMissionWaypoint(checkpoints[0].x, checkpoints[0].z, 0x00ff9d);
     this.activeMission = {
       kind: 'race',
       type: race.id,
@@ -480,8 +976,10 @@ export class Game {
       checkpoints,
       index: 0,
       startTime: performance.now(),
-      multiplayer: !!opts.multiplayer || this.mp.active
+      multiplayer: !!opts.multiplayer || this.mp.active,
+      campaign: opts.campaign || null
     };
+    this._setRoutePoints([this.controller.mesh.position, ...checkpoints], 0x00ff9d);
     this.flags.raced = true;
     if (this.mp.active && this.mp.role === 'host') {
       this.mp.hostStartRace(race, checkpoints);
@@ -497,11 +995,141 @@ export class Game {
       } else {
         this.ui.toast('GO');
         this.audio.checkpoint();
-        this._spawnRaceAI(this.activeMission.checkpoints);
+        if (this.activeMission?.campaign) this._spawnCampaignRivals();
+        else this._spawnRaceAI(this.activeMission.checkpoints);
       }
     };
     setTimeout(tick, 700);
     this.ui.toast(`${race.name} — get ready`);
+    return true;
+  }
+
+  _setMissionWaypoint(x, z, color=0xffcc33) {
+    this._clearMissionWaypoint();
+    const g = new THREE.Group();
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(4.2, 0.22, 10, 32), new THREE.MeshBasicMaterial({color}));
+    ring.rotation.x = Math.PI/2; ring.position.y = 0.25; g.add(ring);
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.55, 8, 12), new THREE.MeshBasicMaterial({color, transparent:true, opacity:.28}));
+    beam.position.y = 4; g.add(beam);
+    const beacon = new THREE.Mesh(new THREE.SphereGeometry(.42, 16, 10), new THREE.MeshBasicMaterial({color}));
+    beacon.position.y = 8; g.add(beacon);
+    g.position.set(x,0,z); this.scene.add(g); this.missionWaypoint = g;
+  }
+
+  _clearMissionWaypoint() {
+    if (this.missionWaypoint) this.scene.remove(this.missionWaypoint);
+    this.missionWaypoint = null;
+  }
+
+  _spawnCampaignRivals() {
+    this._clearCampaignRivals();
+    const m = this.activeMission;
+    if (!m?.campaign || !this.controller) return;
+
+    // Three fictional rival drivers. They are intentionally not tied to the
+    // player's vehicle inventory and never award/receive mission completion.
+    const ids = ['urban_lx', 'falcon_sport', 'city_explorer'];
+    const names = ['Alex', 'Jordan', 'Riley'];
+    let route = [];
+    if (m.kind === 'race' && Array.isArray(m.checkpoints)) {
+      route = [{ x: this.controller.mesh.position.x, z: this.controller.mesh.position.z }, ...m.checkpoints];
+    } else if (m.dest) {
+      route = this.activeRoute?.length ? this.activeRoute.map(q => ({ x: q.x, z: q.z })) : [
+        { x: this.controller.mesh.position.x, z: this.controller.mesh.position.z },
+        { x: m.dest.x, z: m.dest.z }
+      ];
+    } else {
+      // Objective missions without a driving destination still have a visible
+      // parallel contest: upgrades race to the garage, while vehicle purchases
+      // race to the marketplace. They stop short of the objective.
+      const objective = m.campaignType === 'buy'
+        ? LANDMARKS.find(x => x.id === 'market')
+        : LANDMARKS.find(x => x.id === 'garage');
+      const target = objective || { x: 40, z: -60 };
+      route = [
+        { x: this.controller.mesh.position.x, z: this.controller.mesh.position.z },
+        { x: target.x, z: target.z }
+      ];
+    }
+    if (route.length < 2) return;
+
+    this._campaignRivals = ids.map((id, i) => {
+      const def = cloneVehicle(getVehicleById(id));
+      def.isOwned = false;
+      const mesh = createVehicleMesh(def);
+      const start = route[0];
+      const lateral = (i - 1) * 6;
+      mesh.position.set(start.x + lateral, 0, start.z + 9 + i * 3);
+      mesh.rotation.y = this.controller.mesh.rotation.y;
+      this.scene.add(mesh);
+
+      const tag = new THREE.Group();
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(1.7, 0.12, 8, 24),
+        new THREE.MeshBasicMaterial({ color: 0xff3b5c, transparent: true, opacity: 0.75 })
+      );
+      ring.rotation.x = Math.PI / 2;
+      ring.position.y = 0.15;
+      tag.add(ring);
+      const beacon = new THREE.Mesh(
+        new THREE.SphereGeometry(0.28, 12, 8),
+        new THREE.MeshBasicMaterial({ color: 0xff3b5c })
+      );
+      beacon.position.y = 2.7;
+      tag.add(beacon);
+      mesh.add(tag);
+
+      return {
+        mesh,
+        def,
+        name: names[i],
+        route,
+        segment: 1,
+        speed: 13.5 + i * 2.2,
+        progress: 0,
+        finished: false
+      };
+    });
+
+    this.ui.toast('3 RIVALS ENTERED THE MISSION — BEAT THEM TO THE FINISH!');
+  }
+
+  _updateCampaignRivals(dt) {
+    const m = this.activeMission;
+    if (!m?.campaign || !this._campaignRivals.length) return;
+    for (const rival of this._campaignRivals) {
+      if (rival.finished || !rival.route?.length) continue;
+      const targetIndex = Math.min(rival.segment, rival.route.length - 1);
+      const target = rival.route[targetIndex];
+      if (!target) continue;
+      const final = targetIndex >= rival.route.length - 1;
+      const dx = target.x - rival.mesh.position.x;
+      const dz = target.z - rival.mesh.position.z;
+      const d = Math.hypot(dx, dz);
+
+      // Always leave a clear buffer before the final destination/checkpoint.
+      // Rivals can look competitive but can never cross the player's finish line.
+      const finishBuffer = m.kind === 'race' ? 18 : 14;
+      if (final && d <= finishBuffer) {
+        rival.finished = true;
+        rival.progress = Math.min(92, Math.max(rival.progress, 92));
+        continue;
+      }
+      const step = Math.min(d, rival.speed * dt);
+      if (d > 0.001) {
+        rival.mesh.position.x += (dx / d) * step;
+        rival.mesh.position.z += (dz / d) * step;
+        rival.mesh.rotation.y = Math.atan2(dx / d, dz / d);
+      }
+      if (d <= 7 && !final) rival.segment++;
+      const totalSegments = Math.max(1, rival.route.length - 1);
+      rival.progress = Math.min(92, ((Math.max(0, rival.segment - 1) + (1 - Math.min(1, d / 100))) / totalSegments) * 100);
+    }
+  }
+
+  _clearCampaignRivals() {
+    (this._campaignRivals || []).forEach(r => { this.scene.remove(r.mesh); this._disposeObject3D(r.mesh); });
+    this._campaignRivals = [];
   }
 
   _spawnRaceAI(checkpoints) {
@@ -513,12 +1141,18 @@ export class Game {
       const mesh = createVehicleMesh(def);
       mesh.position.set(checkpoints[0].x + (i + 1) * 5, 0, checkpoints[0].z - 10);
       this.scene.add(mesh);
-      return { mesh, def, cp: 0, speed: 16 + i * 3 };
+      const marker = new THREE.Group();
+      const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.55, 1.5, 4), new THREE.MeshBasicMaterial({color: 0xff3344, transparent: true, opacity: 0.95}));
+      arrow.rotation.z = Math.PI / 2; arrow.position.y = 2.7; marker.add(arrow);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(1.8, 0.12, 8, 24), new THREE.MeshBasicMaterial({color: 0xff3344, transparent: true, opacity: 0.7}));
+      ring.rotation.x = Math.PI / 2; ring.position.y = 0.15; marker.add(ring);
+      mesh.add(marker);
+      return { mesh, def, cp: 0, speed: 16 + i * 3, marker };
     });
   }
 
   _clearRaceAI() {
-    (this._raceAI || []).forEach(r => this.scene.remove(r.mesh));
+    (this._raceAI || []).forEach(r => { this.scene.remove(r.mesh); this._disposeObject3D(r.mesh); });
     this._raceAI = [];
   }
 
@@ -554,14 +1188,36 @@ export class Game {
   _missionUpdate() {
     if (!this.activeMission || !this.controller) return;
     const p = this.controller.mesh.position;
-    if (this.activeMission.kind === 'job') {
+    if (this.activeMission.kind === 'campaign' && this.activeMission.campaignType === 'drive') {
+      const d = Math.hypot(p.x - this.activeMission.dest.x, p.z - this.activeMission.dest.z);
+      if (d < 10 && !this.activeMission.paid) { this.activeMission.paid = true; this._completeCampaignMission(); }
+    } else if (this.activeMission.kind === 'campaign' && this.activeMission.campaignType === 'upgrade') {
+      // Completion is triggered by upgradeVehicle().
+    } else if (this.activeMission.kind === 'campaign' && this.activeMission.campaignType === 'buy') {
+      // Completion is triggered by buying a vehicle.
+    } else if ((this.activeMission.kind === 'campaign' && this.activeMission.campaignType === 'job') || this.activeMission.kind === 'job') {
+      // Campaign delivery missions use the same destination completion as side jobs,
+      // but must stay marked as campaign so the campaign reward is paid exactly once.
       const d = Math.hypot(p.x - this.activeMission.dest.x, p.z - this.activeMission.dest.z);
       if (d < 10 && !this.activeMission.paid) this._completeJob();
+    } else if (this.activeMission.kind === 'gps') {
+      const d = Math.hypot(p.x - this.activeMission.dest.x, p.z - this.activeMission.dest.z);
+      if (d < 10 && !this.activeMission.paid) {
+        this.activeMission.paid = true;
+        const destinationName = this.activeMission.dest.name;
+        this._clearMissionWaypoint();
+        this._clearRoute();
+        this.activeMission = null;
+        this.audio.success();
+        this.ui.toast(`Arrived at ${destinationName}`);
+      }
     } else if (this.activeMission.kind === 'race') {
       const cp = this.activeMission.checkpoints[this.activeMission.index];
       if (cp && Math.hypot(p.x - cp.x, p.z - cp.z) < 10) {
         this.activeMission.index++;
         this.audio.checkpoint();
+        const next = this.activeMission.checkpoints[this.activeMission.index];
+        if (next) this._setMissionWaypoint(next.x, next.z, 0x00ff9d);
         const markers = this._raceMarkers || [];
         if (markers[this.activeMission.index - 1]) markers[this.activeMission.index - 1].material.color.setHex(0x335544);
         if (markers[this.activeMission.index]) markers[this.activeMission.index].material.color.setHex(0x00ff9d);
@@ -573,6 +1229,11 @@ export class Game {
   _completeJob() {
     const m = this.activeMission;
     if (!m || m.paid) return;
+    if (m.kind === 'campaign' && m.campaign) {
+      m.paid = true;
+      this._completeCampaignMission();
+      return;
+    }
     m.paid = true;
     const condNow = this.controller?.def.currentCondition ?? 100;
     const clean = condNow >= m.startDamage - 1;
@@ -580,11 +1241,13 @@ export class Game {
     if (m.type === 'offroad') this.flags.offroadJob = true;
     const pay = calculateJobPayout(m.type, m.dist, 1.1, clean ? 1.15 : 0.85, 1);
     const xp = 25 + Math.round(m.dist * 8);
-    this.economy.earn(pay);
+    this._earn(pay);
     this.state.player.xp += xp;
     this.state.player.jobsCompleted++;
     this.state.player.level = levelFromXp(this.state.player.xp);
     this.activeMission = null;
+    this._clearMissionWaypoint();
+    this._clearRoute();
     this.audio.success();
     this.ui.toast(`Job complete +${this.economy.format(pay)}  +${xp} XP`);
     this.persist();
@@ -592,6 +1255,14 @@ export class Game {
 
   _completeRace() {
     if (!this.activeMission || this.activeMission.paid) return;
+    if (this.activeMission.campaign) {
+      this.activeMission.paid = true;
+      this._clearRaceMarkers();
+      this._clearRaceAI();
+      this._clearCampaignRivals();
+      this._completeCampaignMission();
+      return;
+    }
     this.activeMission.paid = true;
     const elapsed = (performance.now() - this.activeMission.startTime) / 1000;
     const mp = this.activeMission.multiplayer && this.mp.active;
@@ -607,18 +1278,67 @@ export class Game {
     const win = mp ? place === 1 : elapsed < 90;
     const pay = win ? (mp ? 650 : 420) : (mp ? 220 : 160);
     const xp = win ? 50 : 20;
-    this.economy.earn(pay);
+    this._earn(pay);
     this.state.player.xp += xp;
     if (win) this.state.player.racesWon++;
     this.state.player.level = levelFromXp(this.state.player.xp);
     this.activeMission = null;
+    this._clearMissionWaypoint();
+    this._clearRoute();
     this._clearRaceMarkers();
     this._clearRaceAI();
+    this._clearCampaignRivals();
     this.audio.success();
     this.ui.toast(mp
       ? `P${place}  ${elapsed.toFixed(1)}s  +${this.economy.format(pay)}`
       : `${win ? 'Race won' : 'Race finished'} +${this.economy.format(pay)}`);
     this.persist();
+  }
+
+  _applyShopAppearance() {
+    const eq = this.state.player.shop?.equipped || {};
+    const outfit = getShopItem(eq.outfit)?.style || { shirt: 0x244a7a, trousers: 0x202634 };
+    const shoes = getShopItem(eq.shoes)?.style?.color || 0x151515;
+    const hair = getShopItem(eq.hair)?.style?.color || 0x17120f;
+    if (!this.playerMesh) return;
+    const shirt = this.playerMesh.getObjectByName('david_shirt');
+    const trousers = this.playerMesh.getObjectByName('david_trousers');
+    const shoeMeshes = this.playerMesh.children.filter(x => x.name === 'david_shoe');
+    const hairMesh = this.playerMesh.getObjectByName('david_hair');
+    const chain = this.playerMesh.getObjectByName('david_accessory_chain');
+    const shades = this.playerMesh.getObjectByName('david_accessory_shades');
+    if (shirt?.material?.color) shirt.material.color.setHex(outfit.shirt);
+    if (trousers?.material?.color) trousers.material.color.setHex(outfit.trousers);
+    shoeMeshes.forEach(x => x.material?.color?.setHex(shoes));
+    if (hairMesh?.material?.color) hairMesh.material.color.setHex(hair);
+    if (chain) chain.visible = eq.accessory === 'accessory_gold';
+    if (shades) shades.visible = eq.accessory === 'accessory_shades';
+  }
+
+  buyShopItem(id) {
+    const item = getShopItem(id);
+    if (!item) return false;
+    const shop = this.state.player.shop || (this.state.player.shop = { owned: [], equipped: {} });
+    if (!Array.isArray(shop.owned)) shop.owned = [];
+    if (shop.owned.includes(id)) return this.equipShopItem(id);
+    if (!this.economy.canAfford(item.price)) { this.ui.toast('INSUFFICIENT FUNDS'); return false; }
+    this.economy.spend(item.price);
+    shop.owned.push(id);
+    this.flags.shopPurchase = true;
+    this.equipShopItem(id, true);
+    this.ui.toast(`${item.name} purchased & equipped`);
+    this.persist();
+    return true;
+  }
+
+  equipShopItem(id, silent = false) {
+    const item = getShopItem(id);
+    const shop = this.state.player.shop || (this.state.player.shop = { owned: [], equipped: {} });
+    if (!Array.isArray(shop.owned) || !shop.owned.includes(id)) return false;
+    shop.equipped[item.slot] = id;
+    this._applyShopAppearance();
+    if (!silent) { this.ui.toast(`${item.name} equipped`); this.persist(); }
+    return true;
   }
 
   buyVehicle(id) {
@@ -647,7 +1367,11 @@ export class Game {
     this.vehicleActors.push({ def: owned, mesh, ctrl: new VehicleController(mesh, owned), temp: false });
     this.audio.success();
     this.ui.toast(`Purchased ${base.name} — added to garage`);
-    this.persist();
+    if (this.activeMission?.kind === 'campaign' && this.activeMission.campaignType === 'buy') {
+      this._completeCampaignMission();
+    } else {
+      this.persist();
+    }
     return true;
   }
 
@@ -693,7 +1417,8 @@ export class Game {
     if (part === 'fuelSystem') v.fuelConsumption *= 0.94;
     this.flags.upgraded = true;
     this.ui.toast(`${part} upgraded to ${v.upgrades[part]}`);
-    this.persist();
+    if (this.activeMission?.kind === 'campaign' && this.activeMission.campaignType === 'upgrade') this._completeCampaignMission();
+    else this.persist();
   }
 
   paintVehicle(v, color) {
@@ -716,8 +1441,9 @@ export class Game {
   }
 
   expandGarage() {
-    const next = this.state.garage.capacity === 5 ? 10 : this.state.garage.capacity === 10 ? 15 : null;
-    const cost = next === 10 ? 15000 : 40000;
+    const cap = Number(this.state.garage.capacity || 8);
+    const next = cap < 12 ? 12 : cap < 20 ? 20 : cap < 30 ? 30 : null;
+    const cost = next === 12 ? 12000 : next === 20 ? 30000 : 65000;
     if (!next) { this.ui.toast('Garage already premium'); return; }
     if (!this.economy.canAfford(cost)) { this.ui.toast('INSUFFICIENT FUNDS'); return; }
     this.economy.spend(cost);
@@ -807,11 +1533,21 @@ export class Game {
     if (this._tdTimer) { clearTimeout(this._tdTimer); this._tdTimer = null; }
     const catalogId = this.testDrive.catalogId;
     const prevUid = this.testDrive.prevUid;
-    if (this.mode === 'driving' && this.controller?.def?.isTestDrive) this.exitVehicle();
     this.scene.remove(this.testDrive.mesh);
     this.vehicleActors = this.vehicleActors.filter(a => !a.temp && a.mesh !== this.testDrive.mesh);
     this.testDrive = null;
+    this.activeActor = this.findActorByUid(prevUid) || this.activeActor;
     this.state.activeVehicleUid = prevUid;
+    this.state.activeVehicleId = this.activeActor?.def?.id || this.state.activeVehicleId;
+    if (this.activeActor) {
+      this.controller = this.activeActor.ctrl;
+      this.mode = 'driving';
+      this.playerMesh.visible = false;
+    } else {
+      this.controller = null;
+      this.mode = 'onfoot';
+      this.playerMesh.visible = true;
+    }
     this.ui.toast('Test drive ended');
     this.ui.offerTestDriveReturn(this, catalogId);
   }

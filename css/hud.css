@@ -51,6 +51,8 @@
   transition: width 0.08s linear;
 }
 
+#vehicle-name-display{font-size:.9rem;font-weight:950;letter-spacing:.08em;color:#fff;margin-bottom:9px;text-transform:uppercase;text-shadow:0 0 12px rgba(0,212,255,.35)}
+
 #vehicle-status {
   position: absolute;
   bottom: 28px;
@@ -140,6 +142,8 @@
 }
 
 #mission-panel {
+  box-shadow: 0 10px 30px rgba(0,0,0,.28);
+  backdrop-filter: blur(10px);
   position: absolute;
   top: 70px;
   left: 50%;
@@ -153,13 +157,17 @@
 }
 
 #mission-title {
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 0.72rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
   color: #00d4ff;
   margin-bottom: 4px;
 }
 
 #mission-objective {
-  font-size: 0.9rem;
+  font-size: 1rem;
+  font-weight: 700;
   color: #c0c8d8;
 }
 
@@ -215,3 +223,18 @@
 }
 
 #mp-board .you { color: #00ff9d; font-weight: 700; }
+#mission-help{font-size:.68rem;color:#7fd8ff;margin-top:7px;letter-spacing:.06em;font-weight:700}
+
+#mission-reward{margin-top:5px;font-size:.72rem;font-weight:800;color:#00ff9d;letter-spacing:.04em}
+.campaign-brief{display:flex;flex-direction:column;gap:8px}
+.campaign-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px}
+.mission-card.campaign-active{border-color:#00ff9d;box-shadow:0 0 18px rgba(0,255,157,.12)}
+.mission-card.campaign-done{opacity:.78;border-color:rgba(0,255,157,.28)}
+.mission-reward{color:#aab6c8}.mission-status{display:inline-block;margin-top:8px;font-size:.65rem;font-weight:900;letter-spacing:.08em;color:#00ff9d}
+@media(max-width:600px){.campaign-list{grid-template-columns:1fr}}
+
+.city-map-wrap{display:flex;flex-direction:column;gap:10px}.city-map-info{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:6px 12px;align-items:center;font-size:.8rem;color:#9aa}.city-map-info strong{color:#00ff9d;font-size:.68rem;letter-spacing:.08em}.city-map-info .map-dest-label{color:#ffcc33}.map-no-route{grid-column:1/-1;color:#9aa}.city-map-wrap canvas{width:100%;height:min(62vh,560px);display:block;border:1px solid #263746;border-radius:12px;background:#08111a}.city-map-legend{display:flex;gap:14px;flex-wrap:wrap;color:#aab6c8;font-size:.7rem;font-weight:800}.map-actions{display:flex;gap:8px;flex-wrap:wrap}.map-destination-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:7px}.map-destination-list.hidden{display:none}
+@media(max-width:600px){.city-map-info{grid-template-columns:1fr 1fr}.city-map-wrap canvas{height:52vh}.city-map-legend{font-size:.62rem}}
+.daily-challenge-card{margin-bottom:16px;padding:16px;border:1px solid rgba(255,204,51,.45);border-radius:14px;background:linear-gradient(135deg,rgba(255,204,51,.09),rgba(0,212,255,.05));box-shadow:0 0 24px rgba(255,204,51,.08)}
+.daily-challenge-card.daily-done{border-color:rgba(0,255,157,.45)}
+.daily-badge{font-size:.62rem;font-weight:900;letter-spacing:.15em;color:#ffcc33}.daily-challenge-card h2{margin:5px 0;font-size:1.2rem}.daily-progress{font-size:1rem;font-weight:900;color:#00ff9d;margin:8px 0}

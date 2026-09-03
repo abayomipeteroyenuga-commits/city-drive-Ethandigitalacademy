@@ -6,6 +6,9 @@ import { Settings } from './settings.js';
 import { POIS, DISTRICTS, LANDMARKS } from './world.js';
 import { makeRoomCode } from './multiplayer.js';
 import { DEFAULT_BINDS, codeLabel } from './controls.js';
+import { CAMPAIGN_MISSIONS } from './missions.js';
+import { SHOP_ITEMS } from './shop.js';
+import { getLocalRank, getCareerScore, getRankTier, syncGlobalRank } from './ranking.js';
 
 export class UI {
   constructor() {
@@ -15,6 +18,8 @@ export class UI {
   }
 
   $(id) { return document.getElementById(id); }
+
+  _esc(value) { return String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
   setLoading(pct, text) {
     const fill = this.$('progress-fill');
@@ -33,6 +38,95 @@ export class UI {
     this.$('loading-screen').classList.add('hidden');
     this.$('game-container').classList.remove('hidden');
     if (window.innerWidth <= 600) this.$('mobile-controls').classList.remove('hidden');
+  }
+
+
+  setVehicleSelectionMode(on) {
+    document.body.classList.toggle('vehicle-selection-mode', !!on);
+    this.$('hud')?.classList.toggle('hidden', !!on);
+    this.$('mobile-controls')?.classList.toggle('hidden', true);
+  }
+
+  openVehicleSelect(game) {
+    const catalog = VEHICLES;
+    let selected = catalog.findIndex(v => v.id === game.state.activeVehicleId);
+    if (selected < 0) selected = 0;
+    let filter = 'ALL';
+
+    const category = v => v.isMotorcycle ? 'BIKES' :
+      (['suv','offroad'].includes(v.type) ? 'SUVS' :
+      (['pickup','van','bus','commercial'].includes(v.type) ? 'WORK' : 'CARS'));
+    const visible = () => catalog.map((v, i) => ({v, i})).filter(x => filter === 'ALL' || category(x.v) === filter);
+
+    const refresh = () => {
+      const v = catalog[selected];
+      game.previewVehicle(v);
+      const root = this.$('ui-panels');
+      const ownedIds = new Set((game.state.garage.vehicles || []).filter(x => x?.isOwned !== false).map(x => x.id));
+      const owned = ownedIds.has(v.id);
+      const items = visible();
+      const selectedVisible = items.findIndex(x => x.i === selected);
+
+      root.innerHTML = `<div class="vehicle-select-screen" id="vehicle-select-screen">
+        <div class="showroom-glow"></div>
+        <header class="showroom-header">
+          <div class="showroom-brand"><span class="brand-mark">CD</span><div><b>CITY DRIVE</b><small>METROPOLIS EDITION</small></div></div>
+          <div class="showroom-status"><span class="live-dot"></span> GLOBAL CITY • ${catalog.length} RIDES</div>
+          <div class="modern-cash-display"><span class="cash-icon">$</span><div><small>CITY CASH</small><strong>${game.economy.format()}</strong></div>${game.isNewGameSession ? `<div class="starting-cash"><span>START</span><button class="cash-choice ${game.economy.getMoney()===20000?'active':''}" data-cash="20000">$20K</button><button class="cash-choice ${game.economy.getMoney()===50000?'active':''}" data-cash="50000">$50K</button></div>` : ''}</div>
+        </header>
+
+        <div class="showroom-hero-copy">
+          <span class="hero-kicker">YOUR CITY. YOUR RIDE.</span>
+          <h1>CHOOSE YOUR<br><em>RIDE.</em></h1>
+          <p>Step into the city with a machine that matches your style. Browse it. Own it. Drive it.</p>
+        </div>
+
+        <div class="showroom-vehicle-name"><div class="selected-ride-flag">NOW DRIVING PREVIEW</div><span>${v.isMotorcycle ? 'POWER BIKE' : category(v) === 'SUVS' ? 'SUV / OFF-ROAD' : category(v) === 'WORK' ? 'COMMERCIAL' : 'PERFORMANCE CAR'}</span><h2>${v.name}</h2><small>${v.manufacturer || 'CITY DRIVE'} · ${v.topSpeed} KM/H</small></div>
+
+        <div class="showroom-bottom">
+          <section class="showroom-detail">
+            <div class="detail-line"><span>PERFORMANCE</span><b>${v.topSpeed} KM/H</b></div>
+            <div class="showroom-bars"><div><span>HANDLING</span><i><b style="width:${Math.min(100, Number(v.handling)||0)}%"></b></i></div><div><span>OFF ROAD</span><i><b style="width:${Math.min(100, Number(v.offroad)||0)}%"></b></i></div></div>
+            <p>${v.description || 'Built for the streets of the city.'}</p>
+            <button class="menu-btn primary drive-now" id="drive-now"><span>${owned ? '▶' : '◆'}</span> ${owned ? 'DRIVE THIS RIDE' : 'BUY & DRIVE'}</button>
+            <div class="drive-hint">ENTER / SPACE TO LAUNCH <span>•</span> ← → BROWSE</div>
+          </section>
+
+          <section class="showroom-picker">
+            <nav class="showroom-tabs">${['ALL','CARS','SUVS','BIKES','WORK'].map(c => `<button class="showroom-tab ${filter===c?'active':''}" data-filter="${c}">${c}</button>`).join('')}</nav>
+            <div class="clean-browse"><button class="browse-arrow" data-browse="prev" aria-label="Previous ride">‹</button><div><span>SELECTED RIDE</span><strong>${Math.max(0, selectedVisible + 1)} / ${items.length}</strong><small>Use A / D or the arrows to browse</small></div><button class="browse-arrow" data-browse="next" aria-label="Next ride">›</button></div>
+          </section>
+        </div>
+      </div>`;
+
+      this.$('drive-now').onclick = () => { if (game.driveSelectedVehicle(v)) this.closePanel(); };
+      this.$('vehicle-select-screen').querySelectorAll('[data-filter]').forEach(btn => btn.onclick = () => {
+        filter = btn.dataset.filter;
+        const first = visible()[0];
+        if (first) selected = first.i;
+        refresh();
+      });
+      this.$('vehicle-select-screen').querySelectorAll('[data-browse]').forEach(btn => btn.onclick = () => {
+        const itemsNow = visible();
+        let pos = itemsNow.findIndex(x => x.i === selected);
+        pos += btn.dataset.browse === 'next' ? 1 : -1;
+        pos = Math.max(0, Math.min(itemsNow.length - 1, pos));
+        selected = itemsNow[pos]?.i ?? selected;
+        refresh();
+      });
+      this.$('vehicle-select-screen').querySelectorAll('[data-cash]').forEach(btn => btn.onclick = () => {
+        if (game.setStartingCash(Number(btn.dataset.cash))) refresh();
+      });
+      this.input.onMenuKey = (e) => {
+        const itemsNow = visible();
+        let pos = itemsNow.findIndex(x => x.i === selected);
+        if (e.code === 'ArrowRight' || e.code === 'KeyD') { pos = Math.min(itemsNow.length - 1, pos + 1); selected = itemsNow[pos]?.i ?? selected; refresh(); e.preventDefault(); }
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') { pos = Math.max(0, pos - 1); selected = itemsNow[pos]?.i ?? selected; refresh(); e.preventDefault(); }
+        if (e.code === 'Enter' || e.code === 'Space') { this.$('drive-now')?.click(); e.preventDefault(); }
+        if (e.code === 'Escape') e.preventDefault();
+      };
+    };
+    refresh();
   }
 
   toast(msg) {
@@ -54,6 +148,8 @@ export class UI {
   updateHUD(game) {
     const v = game.controller?.def;
     const kmh = game.controller ? Math.abs(game.controller.speed) * 3.6 : 0;
+    const vehicleLabel = this.$('vehicle-name-display');
+    if (vehicleLabel) vehicleLabel.textContent = v?.name || 'ON FOOT';
     this.$('speed-num').textContent = String(Math.round(kmh)).padStart(3, '0');
     this.$('gear-display').textContent = game.controller?.gear || 'P';
     this.$('rpm-fill').style.width = ((game.controller?.rpm || 0) * 100) + '%';
@@ -74,16 +170,39 @@ export class UI {
     if (game.activeMission) {
       mp.classList.remove('hidden');
       this.$('mission-title').textContent = game.activeMission.name;
-      if (game.activeMission.kind === 'job') {
+      if (game.activeMission.campaign) {
+        const cm = game.activeMission.campaign;
+        this.$('mission-objective').textContent = `LEVEL ${cm.level}: ${cm.objective}`;
+        if (game.activeMission.dest) {
+          const p = game.controller?.mesh.position || game.playerMesh.position;
+          const d = Math.hypot(p.x - game.activeMission.dest.x, p.z - game.activeMission.dest.z);
+          this.$('mission-distance').textContent = `DISTANCE: ${(d / 10).toFixed(1)} km  •  REWARD: ${game.economy.format(cm.reward)} + ${cm.xp} XP`;
+        } else {
+          this.$('mission-distance').textContent = `REWARD: ${game.economy.format(cm.reward)} + ${cm.xp} XP`;
+        }
+        this.$('mission-help').textContent = `CAMPAIGN LEVEL ${cm.level}/${CAMPAIGN_MISSIONS.length} • COMPLETE THIS OBJECTIVE TO UNLOCK LEVEL ${Math.min(cm.level + 1, CAMPAIGN_MISSIONS.length)}`;
+        const rivals = game._campaignRivals || [];
+        if (rivals.length) {
+          const order = [...rivals].sort((a,b) => (b.progress || 0) - (a.progress || 0));
+          const lead = order[0];
+          this.$('mission-reward').textContent = `🏆 REWARD  ${game.economy.format(cm.reward)}  +  ${cm.xp} XP • 🚗 RIVALS: 3 • LEADER ${lead?.name || 'AI'} ${Math.round(lead?.progress || 0)}%`;
+        } else {
+          this.$('mission-reward').textContent = `🏆 REWARD  ${game.economy.format(cm.reward)}  +  ${cm.xp} XP`;
+        }
+      } else if (game.activeMission.kind === 'job') {
         const p = game.controller?.mesh.position || game.playerMesh.position;
         const d = Math.hypot(p.x - game.activeMission.dest.x, p.z - game.activeMission.dest.z);
-        this.$('mission-objective').textContent = 'Go to ' + game.activeMission.dest.name;
-        this.$('mission-distance').textContent = (d / 10).toFixed(1) + ' km';
+        this.$('mission-objective').textContent = '🎯 DRIVE TO: ' + game.activeMission.dest.name;
+        this.$('mission-distance').textContent = 'DISTANCE: ' + (d / 10).toFixed(1) + ' km';
+        this.$('mission-help').textContent = 'STEP 1/1 • FOLLOW THE GOLD MARKER • ARRIVE SAFELY';
       } else {
-        this.$('mission-objective').textContent = `Checkpoint ${game.activeMission.index + 1}/${game.activeMission.checkpoints.length}`;
-        this.$('mission-distance').textContent = '';
+        const total = game.activeMission.checkpoints.length;
+        const current = Math.min(game.activeMission.index + 1, total);
+        this.$('mission-objective').textContent = `🏁 CHECKPOINT ${current} OF ${total}`;
+        this.$('mission-distance').textContent = 'FOLLOW THE GREEN CHECKPOINTS';
+        this.$('mission-help').textContent = `RACE • PASS CHECKPOINT ${current} • FINISH TO GET PAID`;
       }
-    } else mp.classList.add('hidden');
+    } else { mp.classList.add('hidden'); this.$('mission-reward').textContent = ''; }
 
     const board = this.$('mp-board');
     if (board) {
@@ -121,10 +240,21 @@ export class UI {
     ctx.fillRect(sx(POIS.garage.x) - 2, sy(POIS.garage.z) - 2, 4, 4);
     ctx.fillStyle = '#ffaa00';
     POIS.fuel.forEach(p => ctx.fillRect(sx(p.x) - 2, sy(p.z) - 2, 4, 4));
-    if (game.activeMission?.dest) {
-      ctx.fillStyle = '#fff';
+    if (game.activeRoute?.length > 1) {
+      ctx.strokeStyle = game.activeMission?.kind === 'race' ? '#00ff9d' : '#00d4ff';
+      ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.arc(sx(game.activeMission.dest.x), sy(game.activeMission.dest.z), 4, 0, Math.PI * 2);
+      game.activeRoute.forEach((p, i) => i ? ctx.lineTo(sx(p.x), sy(p.z)) : ctx.moveTo(sx(p.x), sy(p.z)));
+      ctx.stroke();
+    }
+    if (game.activeMission?.dest) {
+      ctx.fillStyle = '#ffcc33';
+      ctx.beginPath();
+      ctx.moveTo(sx(game.activeMission.dest.x), sy(game.activeMission.dest.z)-5);
+      ctx.lineTo(sx(game.activeMission.dest.x)+5, sy(game.activeMission.dest.z));
+      ctx.lineTo(sx(game.activeMission.dest.x), sy(game.activeMission.dest.z)+5);
+      ctx.lineTo(sx(game.activeMission.dest.x)-5, sy(game.activeMission.dest.z));
+      ctx.closePath();
       ctx.fill();
     }
     ctx.fillStyle = '#00ff9d';
@@ -247,13 +377,10 @@ export class UI {
       }
       if (e.code === 'KeyU') this.openUpgrades(game, v);
       if (e.code === 'KeyR') {
-        if (game.controller && game.controller.def === v) game._repair();
-        else { v.currentCondition = 100; game.persist(); this.toast('Repaired ' + v.name); this.openGarage(game); }
+        game.repairVehicle(v); this.openGarage(game);
       }
       if (e.code === 'KeyF') {
-        v.currentFuel = v.fuelCapacity;
-        game.persist();
-        this.toast('Refueled ' + v.name);
+        game.refuelVehicle(v);
         this.openGarage(game);
       }
       if (e.code === 'KeyS') {
@@ -312,7 +439,7 @@ export class UI {
         <button class="menu-btn primary" data-buy="${v.id}">BUY VEHICLE</button>
       </div>`).join('');
     this._dealIndex = 0;
-    this.openPanel(dealer.name || 'DEALERSHIP', `<p style="color:#8aa;font-size:.8rem;margin-bottom:8px">← → browse · Enter select · B buy · T test drive · Esc exit</p>` + cards);
+    this.openPanel(dealer.name || 'DEALERSHIP', `<div class="dealer-hero"><strong>CHOOSE YOUR RIDE</strong><span>18+ modern vehicles • Cars • SUVs • Power Bikes • Commercial</span></div><p style="color:#8aa;font-size:.8rem;margin-bottom:8px">← → browse · Enter select · B buy · T test drive · Esc exit</p>` + cards);
     this.$('ui-panels').querySelectorAll('[data-buy]').forEach(b => {
       b.onclick = () => {
         if (game.buyVehicle(b.dataset.buy)) this.closePanel();
@@ -355,8 +482,10 @@ export class UI {
       b.onclick = () => {
         const base = getVehicleById(b.dataset.used);
         const price = +b.dataset.price;
+        if (!base) { this.toast('Vehicle unavailable'); return; }
+        if (game.state.player.level < base.requiredLevel) { this.toast(`Requires level ${base.requiredLevel}`); return; }
+        if (game.state.garage.vehicles.length >= game.state.garage.capacity) { this.toast('Garage full — expand first'); return; }
         if (!game.economy.canAfford(price)) { this.toast('INSUFFICIENT FUNDS'); return; }
-        if (game.state.garage.vehicles.length >= game.state.garage.capacity) { this.toast('Garage full'); return; }
         game.economy.spend(price);
         const owned = cloneVehicle(base, {
           currentCondition: +b.dataset.cond,
@@ -366,7 +495,8 @@ export class UI {
         game.state.garage.vehicles.push(owned);
         game.flags.purchased = true;
         game._spawnOwnedVehicles();
-        game.persist();
+        if (game.activeMission?.kind === 'campaign' && game.activeMission.campaignType === 'buy') game._completeCampaignMission();
+        else game.persist();
         this.toast('Purchased used ' + base.name);
         this.closePanel();
       };
@@ -374,19 +504,32 @@ export class UI {
   }
 
   openJobs(game) {
-    const cards = POIS.jobs.map(j => `
-      <div class="vehicle-card">
-        <h3>${j.name}</h3>
-        <p>Drive to the ${j.name} marker in the city and press E.</p>
-        <button class="menu-btn" data-job="${j.type}">SET GPS</button>
-      </div>`).join('');
-    this.openPanel('JOBS', cards);
+    const current = game.getCampaignMission?.();
+    const completed = new Set(game.state.player.campaignCompleted || []);
+    const campaign = CAMPAIGN_MISSIONS.map(m => {
+      const done = completed.has(m.level);
+      const active = current?.level === m.level;
+      const locked = !done && !active && m.level > (game.state.player.campaignLevel || 1);
+      return `<div class="mission-card ${active?'campaign-active':''} ${done?'campaign-done':''}">
+        <div class="mission-number">LEVEL ${m.level} ${done?'✓':locked?'🔒':''}</div>
+        <h3>${m.title}</h3>
+        <p><strong>DO THIS:</strong> ${m.objective}</p>
+        <p class="mission-reward">🏆 REWARD: <b>${game.economy.format(m.reward)}</b> + <b>${m.xp} XP</b></p>
+        ${active ? '<span class="mission-status">CURRENT MISSION</span>' : done ? '<span class="mission-status">COMPLETED</span>' : locked ? '<span class="mission-status">LOCKED — COMPLETE PREVIOUS LEVEL</span>' : ''}
+      </div>`;
+    }).join('');
+    const campaignFinished = current && completed.has(current.level) && current.level === CAMPAIGN_MISSIONS.length;
+    const action = current && !game.activeMission && !campaignFinished ? `<button class="menu-btn primary" id="start-campaign-now">START LEVEL ${current.level}</button>` : (campaignFinished ? `<div class="mission-status">🏆 CAMPAIGN COMPLETE — ALL 20 LEVELS FINISHED</div>` : '');
+    const jobs = POIS.jobs.map(j => `<div class="vehicle-card mission-card"><div class="mission-number">SIDE JOB</div><h3>${j.name}</h3><p>Drive to the gold marker and complete the job.</p><button class="menu-btn" data-job="${j.type}">START SIDE JOB</button></div>`).join('');
+    const dc = game.getDailyChallengeStatus?.();
+    const daily = dc ? `<div class="daily-challenge-card ${dc.completed?'daily-done':''}"><div class="daily-badge">DAILY LIVE</div><h2>🔥 ${dc.title}</h2><p><strong>DO THIS:</strong> ${dc.text}</p><div class="daily-progress">${dc.completed ? '✓ COMPLETE' : `${Math.min(dc.value, dc.target).toFixed(dc.id==='distance'||dc.id==='speed'?1:0)} / ${dc.target}`}</div><p class="mission-reward">REWARD: <b>${game.economy.format(dc.reward)}</b> + <b>${dc.xp} XP</b> • STREAK: <b>${dc.streak} DAYS</b></p></div>` : '';
+    this.openPanel('CAMPAIGN MISSIONS', `${daily}<div class="mission-brief campaign-brief"><strong>YOUR CAREER — 20 LEVELS</strong><span>Complete the levels in order. Every level gives CASH + XP and unlocks the next one.</span>${action}</div><div class="campaign-list">${campaign}</div><h3 style="margin:20px 0 10px;color:#00d4ff">SIDE JOBS</h3>${jobs}`);
+    this.$('start-campaign-now')?.addEventListener('click', () => { this.closePanel(); game.startCampaignMission(); });
     this.$('ui-panels').querySelectorAll('[data-job]').forEach(b => {
       b.onclick = () => {
         const j = POIS.jobs.find(x => x.type === b.dataset.job);
-        this.toast('GPS set: ' + j.name);
-        game.activeMission = { kind: 'job', type: j.type, name: j.name, dest: { name: j.name, x: j.x, z: j.z }, startDamage: 100, startTime: performance.now(), dist: 1 };
         this.closePanel();
+        game.startJob(j);
       };
     });
   }
@@ -408,45 +551,42 @@ export class UI {
   }
 
   openMap(game) {
-    const items = [
-      ...POIS.dealerships.map(d => `${d.name}`),
-      ...LANDMARKS.map(l => l.name),
-      ...DISTRICTS.map(d => d.name)
-    ];
-    this._mapZoom = this._mapZoom || 1;
-    this.openPanel('NOVA CITY MAP', `
-      <p>You are in ${game.world.getDistrict(
-        (game.controller?.mesh || game.playerMesh).position.x,
-        (game.controller?.mesh || game.playerMesh).position.z
-      ).name}</p>
-      <p style="margin-top:8px;color:#9aa">Landmarks</p>
-      <ul style="line-height:1.7" id="map-list">${LANDMARKS.map((l, i) => `<li data-mx="${l.x}" data-mz="${l.z}">${l.name}</li>`).join('')}</ul>
-      <p style="color:#8aa;font-size:.8rem;margin-top:8px">↑↓ cursor · Enter set GPS · +/- zoom hint · Esc close · M close</p>
-    `);
-    let idx = 0;
-    const lis = [...document.querySelectorAll('#map-list li')];
-    const paint = () => lis.forEach((li, n) => li.style.color = n === idx ? '#00d4ff' : '');
-    paint();
-    const prev = this.input.onMenuKey;
-    this.input.onMenuKey = (e) => {
-      if (e.code === 'ArrowDown' || e.code === 'KeyS') { idx = Math.min(lis.length - 1, idx + 1); paint(); }
-      if (e.code === 'ArrowUp' || e.code === 'KeyW') { idx = Math.max(0, idx - 1); paint(); }
-      if (e.code === 'Equal' || e.code === 'NumpadAdd') this._mapZoom = Math.min(2, (this._mapZoom || 1) + 0.1);
-      if (e.code === 'Minus' || e.code === 'NumpadSubtract') this._mapZoom = Math.max(0.5, (this._mapZoom || 1) - 0.1);
-      if (e.code === 'Enter') {
-        const li = lis[idx];
-        if (li) {
-          game.activeMission = {
-            kind: 'job', type: 'gps', name: 'GPS', dest: { name: li.textContent, x: +li.dataset.mx, z: +li.dataset.mz },
-            startDamage: 100, startTime: performance.now(), dist: 1
-          };
-          this.toast('GPS: ' + li.textContent);
-          this.closePanel();
-        }
-      }
-      if (e.code === 'KeyM') this.closePanel();
-      if (prev) prev(e);
+    this._mapZoom = this._mapZoom || 0.72;
+    const pos = game.mode === 'driving' && game.controller ? game.controller.mesh.position : game.playerMesh.position;
+    const mission = game.activeMission;
+    const route = game.activeRoute || [];
+    const currentName = game.world.getDistrict(pos.x, pos.z).name;
+    const html = `
+      <div class="city-map-wrap">
+        <div class="city-map-info">
+          <strong>YOU ARE HERE</strong><span>${currentName}</span>
+          ${mission ? `<strong class="map-dest-label" style="color:${mission.kind === 'race' ? '#00ff9d' : mission.kind === 'gps' ? '#00d4ff' : '#ffd34d'}">ACTIVE MISSION</strong><span>${mission.name || mission.dest?.name || 'Mission'}</span>` : '<span class="map-no-route">Choose a destination to reveal your route.</span>'}
+        </div>
+        <canvas id="city-map-canvas" width="900" height="650"></canvas>
+        <div class="city-map-legend"><span>● YOU</span><span style="color:#ffd34d">◆ MISSION</span><span style="color:#00ff9d">━ RACE</span><span style="color:#00d4ff">━ GPS</span><span>□ LANDMARK</span></div>
+        <div class="map-actions"><button class="menu-btn primary" id="map-set-dest">SET DESTINATION</button></div>
+        <div id="map-destination-list" class="map-destination-list hidden">${LANDMARKS.map(l=>`<button class="menu-btn" data-map-dest="${l.id}">${l.name}</button>`).join('')}</div>
+      </div>`;
+    this.openPanel('NOVA CITY — LIVE GPS MAP', html);
+    const canvas = this.$('city-map-canvas');
+    const ctx = canvas.getContext('2d');
+    const draw = () => {
+      const w=canvas.width,h=canvas.height, zoom=this._mapZoom;
+      ctx.clearRect(0,0,w,h); ctx.fillStyle='#08111a'; ctx.fillRect(0,0,w,h);
+      const range=520/zoom; const sx=x=>w/2+(x-pos.x)*(w/(range*2)); const sy=z=>h/2+(z-pos.z)*(h/(range*2));
+      ctx.strokeStyle='#253746'; ctx.lineWidth=8;
+      for(let v=-400;v<=400;v+=80){ ctx.beginPath();ctx.moveTo(sx(v),sy(-420));ctx.lineTo(sx(v),sy(420));ctx.stroke(); ctx.beginPath();ctx.moveTo(sx(-420),sy(v));ctx.lineTo(sx(420),sy(v));ctx.stroke(); }
+      ctx.strokeStyle='#52606d'; ctx.lineWidth=2;
+      if(route.length>1){ ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.shadowColor=missionColor; ctx.shadowBlur=14; ctx.strokeStyle=missionColor; ctx.lineWidth=10; ctx.beginPath();route.forEach((p,i)=>i?ctx.lineTo(sx(p.x),sy(p.z)):ctx.moveTo(sx(p.x),sy(p.z)));ctx.stroke(); ctx.shadowBlur=0; ctx.strokeStyle='#ffffff';ctx.globalAlpha=.78;ctx.lineWidth=2;ctx.beginPath();route.forEach((p,i)=>i?ctx.lineTo(sx(p.x),sy(p.z)):ctx.moveTo(sx(p.x),sy(p.z)));ctx.stroke(); ctx.restore(); }
+      LANDMARKS.forEach(l=>{ const x=sx(l.x),y=sy(l.z); if(x<-20||x>w+20||y<-20||y>h+20)return; ctx.fillStyle='#ffd34d';ctx.fillRect(x-4,y-4,8,8); ctx.font='12px sans-serif';ctx.fillStyle='#dce8f2';ctx.fillText(l.name,x+7,y-7); });
+      ctx.fillStyle='#00ff9d';ctx.beginPath();ctx.arc(w/2,h/2,9,0,Math.PI*2);ctx.fill();
+      if(mission?.dest){ const x=sx(mission.dest.x),y=sy(mission.dest.z); ctx.save();ctx.shadowColor=missionColor;ctx.shadowBlur=20;ctx.fillStyle=missionColor;ctx.beginPath();ctx.moveTo(x,y-15);ctx.lineTo(x+14,y);ctx.lineTo(x,y+15);ctx.lineTo(x-14,y);ctx.closePath();ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();ctx.font='bold 14px sans-serif';ctx.fillStyle='#fff';ctx.fillText('MISSION: '+(mission.dest.name||mission.name||'DESTINATION'),x+18,y+5);ctx.restore(); }
     };
+    draw();
+    this.$('map-set-dest').onclick=()=>this.$('map-destination-list').classList.toggle('hidden');
+    this.$('map-destination-list').querySelectorAll('[data-map-dest]').forEach(b=>b.onclick=()=>{ const l=LANDMARKS.find(x=>x.id===b.dataset.mapDest); if(l){ game.setGPSDestination(l); this.closePanel(); } });
+    const prev=this.input.onMenuKey;
+    this.input.onMenuKey=(e)=>{ if(e.code==='Equal'||e.code==='NumpadAdd'){this._mapZoom=Math.min(1.8,this._mapZoom+.1);draw();e.preventDefault();} if(e.code==='Minus'||e.code==='NumpadSubtract'){this._mapZoom=Math.max(.45,this._mapZoom-.1);draw();e.preventDefault();} if(e.code==='KeyM'){this.closePanel();e.preventDefault();return;} if(prev)prev(e); };
   }
 
   openMultiplayer(game) {
@@ -499,6 +639,30 @@ export class UI {
     };
   }
 
+  openShop(game) {
+    const shop = game.state.player.shop || { owned: [], equipped: {} };
+    const owned = new Set(shop.owned || []);
+    const cards = SHOP_ITEMS.map(item => {
+      const isOwned = owned.has(item.id);
+      const equipped = shop.equipped?.[item.slot] === item.id;
+      return `<div class="vehicle-card shop-card"><div class="mission-number">${item.category}</div><h3>${item.name}</h3><div class="price">${item.price ? game.economy.format(item.price) : 'FREE'} · ${item.slot.toUpperCase()}</div><p style="color:#9aa;font-size:.82rem">Cosmetic item for David's on-foot appearance.</p><button class="menu-btn ${equipped?'primary':''}" data-shop="${item.id}">${equipped?'EQUIPPED':isOwned?'EQUIP':`BUY ${item.price ? game.economy.format(item.price) : 'FREE'}`}</button></div>`;
+    }).join('');
+    this.openPanel('CITY SHOP — DRIVER STYLE', `<div class="dealer-hero"><strong>SHOP NOVA CITY</strong><span>Outfits • Shoes • Hair • Accessories</span></div><p style="color:#8aa;font-size:.82rem;margin-bottom:10px">Buy once, keep forever. Cosmetic purchases never change race balance.</p><div class="shop-grid">${cards}</div>`);
+    this.$('ui-panels').querySelectorAll('[data-shop]').forEach(b => b.onclick = () => { game.buyShopItem(b.dataset.shop); this.openShop(game); });
+  }
+
+  openRankings(game) {
+    const r = getLocalRank(game); const score = getCareerScore(game);
+    const render = (data) => {
+      const rows = (data.drivers || []).map((x,i)=>`<div class="rank-row ${x.id===game._rankId?'rank-you':''}"><b>#${i+1}</b><span>${String(x.name).replace(/[<>&]/g,'')}</span><span>${Number(x.score||0).toLocaleString()} pts</span><small>LVL ${x.level||1}</small></div>`).join('');
+      const title = data.online ? '🌍 GLOBAL LEADERBOARD' : '📱 LOCAL OFFLINE RANKING';
+      this.openPanel('GLOBAL RANKINGS', `<div class="rank-hero"><strong>${data.tier || getRankTier(score)}</strong><span>Career Score ${score.toLocaleString()} · Your position #${data.position || r.position}</span></div><div class="rank-note">${title} · ${data.online ? 'Your score is synced to the published CITY DRIVE leaderboard.' : 'Internet is unavailable, so your career remains fully playable and your ranking is stored privately on this device.'}</div><h3 style="margin:16px 0 8px;color:#00d4ff">TOP DRIVERS</h3><div class="rank-list">${rows || '<p>No rankings yet.</p>'}</div>`);
+    };
+    // Show instantly, then replace with the live global board when online.
+    render({ ...r, online:false });
+    syncGlobalRank(game).then(render).catch(()=>{});
+  }
+
   openAchievements(game) {
     const u = game.state.achievements || {};
     const html = ACHIEVEMENT_DEFS.map(a => `
@@ -513,14 +677,14 @@ export class UI {
     const p = game.state.player;
     const prog = xpProgress(p.xp);
     this.openPanel('PROFILE', `
-      <h3>${p.name}</h3>
+      <h3>${this._esc(p.name)}</h3>
       <p>Level ${p.level} — ${levelName(p.level)}</p>
       <p>XP ${p.xp} (${prog.toNext} to next)</p>
       <p>Money ${game.economy.format()}</p>
       <p>Vehicles ${game.state.garage.vehicles.length}/${game.state.garage.capacity}</p>
       <p>Jobs ${p.jobsCompleted} · Races won ${p.racesWon}</p>
       <p>Distance ${p.distanceDriven.toFixed(1)} km</p>
-      <label>Change name <input id="rename" value="${p.name}" style="margin:8px;padding:6px;background:#111;color:#fff;border:1px solid #456"/></label>
+      <label>Change name <input id="rename" value="${this._esc(p.name)}" style="margin:8px;padding:6px;background:#111;color:#fff;border:1px solid #456"/></label>
       <button class="menu-btn" id="save-name">SAVE NAME</button>
     `);
     this.$('save-name').onclick = () => {
@@ -580,11 +744,11 @@ export class UI {
 
   openHowTo() {
     this.openPanel('HOW TO PLAY', `
-      <p>Start with the Metro S and $12,500 City Cash.</p>
-      <p>Keyboard-first: hold W to accelerate, A/D to steer, S to brake. Combos like W+A and W+Shift work.</p>
+      <p>$20,000 or $50,000 City Cash to start. Choose from cars, SUVs, power bikes and commercial vehicles.</p>
+      <p>Drive: W/A/S/D. Shift = NITRO. Ctrl = SPRINT while on foot. On mobile, hold SPRINT to run.</p>
       <p>Walk with WASD. Shift run. Space jump. E enter/exit. F lights. H horn. M map. G garage. P or Esc pause.</p>
-      <p>Complete jobs (green markers) and races (red) to earn money and XP.</p>
-      <p>Buy vehicles at dealerships (pink). Store them in the garage (cyan).</p>
+      <p>Complete jobs (gold markers) and races (green checkpoints) to earn money and XP. During races, follow the marked route and chase the rival vehicles.</p>
+      <p>Buy vehicles at dealerships (pink) or the Vehicle Marketplace. Store them in the garage (cyan).</p>
       <p>Refuel at yellow stations. Repair at the green repair center.</p>
       <p>Upgrades actually change acceleration, grip, brakes, nitro and fuel use.</p>
       <p>Reckless driving raises stars — police will chase you.</p>

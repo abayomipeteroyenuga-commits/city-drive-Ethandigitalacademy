@@ -96,6 +96,7 @@ export class Input {
     this.gyroEnabled = false;
     this.gyroSteer = 0;
     this.gyroBaseline = null;
+    this.mobileHeld = {};
 
     this.p2 = { accel: false, brake: false, left: false, right: false, handbrake: false, nitro: false };
 
@@ -186,12 +187,12 @@ export class Input {
       this.p2.handbrake = this.p2.nitro = false;
       return;
     }
-    this.accel = this._heldAction('accel');
-    this.brake = this._heldAction('brake');
-    this.left = this._heldAction('left');
-    this.right = this._heldAction('right');
-    this.handbrake = this._heldAction('handbrake');
-    this.nitro = this._heldAction('nitro');
+    this.accel = this._heldAction('accel') || !!this.mobileHeld.accel;
+    this.brake = this._heldAction('brake') || !!this.mobileHeld.brake;
+    this.left = this._heldAction('left') || !!this.mobileHeld.left;
+    this.right = this._heldAction('right') || !!this.mobileHeld.right;
+    this.handbrake = this._heldAction('handbrake') || !!this.mobileHeld.handbrake;
+    this.nitro = this._heldAction('nitro') || !!this.mobileHeld.nitro;
     this.enter = this._heldAction('interact');
     this.camera = this._heldAction('camera');
     this.map = this._heldAction('map');
@@ -200,7 +201,7 @@ export class Input {
     this.headlights = this._heldAction('headlights');
     this.horn = this._heldAction('horn');
     this.jump = this._heldAction('jump');
-    this.sprint = this._heldAction('sprint');
+    this.sprint = this._heldAction('sprint') || !!this.mobileHeld.sprint;
 
     this.p2.accel = this.held.has('KeyI');
     this.p2.brake = this.held.has('KeyK');
@@ -246,6 +247,7 @@ export class Input {
     this.handbrake = this.nitro = this.enter = this.camera = false;
     this.map = this.pause = this.garage = this.headlights = this.horn = this.jump = false;
     this.sprint = false;
+    this.mobileHeld = {};
     this.p2.accel = this.p2.brake = this.p2.left = this.p2.right = false;
     this.p2.handbrake = this.p2.nitro = false;
   }
@@ -273,7 +275,8 @@ export class Input {
       }
       if (!this._gyroBound) {
         this._gyroHandler = (e) => {
-          const gamma = Number.isFinite(e.gamma) ? e.gamma : 0;
+          let gamma = Number.isFinite(e.gamma) ? e.gamma : 0;
+          if (screen.orientation?.type?.includes('landscape')) gamma *= -1;
           if (this.gyroBaseline == null) this.gyroBaseline = gamma;
           const delta = THREEClamp(gamma - this.gyroBaseline, -35, 35);
           this.gyroSteer = Math.max(-1, Math.min(1, delta / 22));
@@ -292,8 +295,8 @@ export class Input {
     const hold = (id, prop) => {
       const el = document.getElementById(id);
       if (!el) return;
-      const start = (e) => { e.preventDefault(); this[prop] = true; };
-      const end = (e) => { e.preventDefault(); this[prop] = false; };
+      const start = (e) => { e.preventDefault(); this.mobileHeld[prop] = true; el.classList.add('active'); };
+      const end = (e) => { e.preventDefault(); this.mobileHeld[prop] = false; el.classList.remove('active'); };
       el.addEventListener('touchstart', start, { passive: false });
       el.addEventListener('touchend', end);
       el.addEventListener('touchcancel', end);
@@ -317,6 +320,8 @@ export class Input {
     if (cam) cam.addEventListener('click', () => { this._fakePress('camera'); });
     const ex = document.getElementById('btn-exit');
     if (ex) ex.addEventListener('click', () => { this._fakePress('interact'); });
+    const pause = document.getElementById('btn-pause-mobile');
+    if (pause) pause.addEventListener('click', () => { this._fakePress('pause'); });
   }
 
   _fakePress(action) {

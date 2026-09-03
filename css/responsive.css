@@ -137,3 +137,5 @@
     font-size: 1.1rem;
   }
 }
+
+#btn-sprint.active,#btn-gyro.active{box-shadow:0 0 14px rgba(0,212,255,.55);border-color:#00d4ff}

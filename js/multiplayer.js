@@ -96,9 +96,9 @@ export class Multiplayer {
 
   async _tryPeerJS(isHost) {
     try {
-      if (!window.Peer) {
-        await loadScript('https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js');
-      }
+      // PeerJS is intentionally not downloaded at runtime. CITY DRIVE's core
+      // single-player and local 2P modes are fully offline. Internet-only
+      // PeerJS rooms are skipped when PeerJS is not already bundled.
       if (!window.Peer) return;
       const peerId = isHost ? PREFIX + this.room + '-host' : PREFIX + this.room + '-' + this.myId;
       this.peer = new window.Peer(peerId, { debug: 0 });
@@ -317,16 +317,4 @@ function makeNameLabel(text) {
   spr.position.y = 2.4;
   spr.scale.set(3.2, 0.8, 1);
   return spr;
-}
-
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) return resolve();
-    const s = document.createElement('script');
-    s.src = src;
-    s.async = true;
-    s.onload = () => resolve();
-    s.onerror = () => resolve(); // optional
-    document.head.appendChild(s);
-  });
 }

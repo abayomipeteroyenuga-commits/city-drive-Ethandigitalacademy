@@ -1,168 +1,108 @@
 /**
- * Procedural vehicle meshes — each of the 15 vehicles looks different.
+ * CITY DRIVE — High-detail procedural vehicle meshes.
+ * Lightweight, original geometry designed for browser performance.
  */
 import * as THREE from 'three';
 
-function box(w, h, d, color, x = 0, y = 0, z = 0) {
-  const m = new THREE.Mesh(
-    new THREE.BoxGeometry(w, h, d),
-    new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.35 })
-  );
-  m.position.set(x, y, z);
-  m.castShadow = true;
-  m.receiveShadow = true;
-  return m;
+const mat = (color, roughness=.42, metalness=.35, emissive=0, ei=0) => new THREE.MeshStandardMaterial({ color, roughness, metalness, emissive, emissiveIntensity: ei });
+function mesh(geo, material, x=0,y=0,z=0){ const m=new THREE.Mesh(geo,material); m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true; return m; }
+function box(w,h,d,color,x=0,y=0,z=0, r=.42, metal=.35){ return mesh(new THREE.BoxGeometry(w,h,d),mat(color,r,metal),x,y,z); }
+function wheel(g,x,y,z,r=.34,w=.24){
+  const tire=mesh(new THREE.TorusGeometry(r,Math.max(.075,r*.22),10,18),mat(0x090b0e,.88,.08));
+  tire.rotation.y=Math.PI/2; tire.position.set(x,y,z); tire.name='wheel'; g.add(tire);
+  const hub=mesh(new THREE.CylinderGeometry(r*.42,r*.42,w*.75,12),mat(0xc3c8ce,.2,.9),x,y,z); hub.rotation.z=Math.PI/2; g.add(hub);
+  const cap=mesh(new THREE.CylinderGeometry(r*.15,r*.15,w*.82,12),mat(0x252a31,.25,.85),x,y,z); cap.rotation.z=Math.PI/2; g.add(cap);
+}
+function wheels4(g,w,l,r=.34,y=.34){ for(const x of [-w*.47,w*.47]) for(const z of [-l*.32,l*.32]) wheel(g,x,y,z,r,.25); }
+function windows(g,w,l,roofY=1.0){
+  const glass=mat(0x101c2b,.12,.72,0x07111d,.25);
+  g.add(mesh(new THREE.BoxGeometry(w*.78,.04,l*.42),glass,0,roofY,-.12));
+  g.add(mesh(new THREE.BoxGeometry(w*.78,.04,l*.20),glass,0,roofY,.98));
+  for(const x of [-w*.43,w*.43]) g.add(mesh(new THREE.BoxGeometry(.035,.28,l*.42),glass,x,roofY,-.08));
+}
+function lights(g,w,l){
+  const head=mat(0xeaf8ff,.12,.55,0x7fd8ff,2.4), tail=mat(0xff1728,.2,.35,0xff0010,1.8);
+  for(const x of [-w*.32,w*.32]){ g.add(mesh(new THREE.BoxGeometry(.28,.13,.08),head,x,.63,l*.51)); g.add(mesh(new THREE.BoxGeometry(.25,.11,.07),tail,x,.62,-l*.51)); }
+  g.add(mesh(new THREE.BoxGeometry(w*.42,.08,.05),mat(0x090b10,.22,.8),0,.59,l*.515));
+}
+function mirrors(g,w,z){ for(const x of [-w*.55,w*.55]) g.add(mesh(new THREE.BoxGeometry(.14,.11,.28),mat(0x11151b,.18,.65),x,1.03,z)); }
+function aero(g,w,l,c,s,sport=false){
+  g.add(box(w*.96,.08,.12,c,0,.48,l*.53,.3,.5));
+  if(sport){ g.add(box(w*.72,.10,.35,c,0,.84,-l*.52,.3,.5)); for(const x of [-w*.36,w*.36]) g.add(box(.06,.14,.22,s,x,.78,-l*.5,.3,.5)); }
+  g.add(box(.12,.08,l*.58,s,0,.47,0,.25,.65));
 }
 
-function cyl(rTop, rBot, h, color, rotX = 0) {
-  const m = new THREE.Mesh(
-    new THREE.CylinderGeometry(rTop, rBot, h, 12),
-    new THREE.MeshStandardMaterial({ color, roughness: 0.7, metalness: 0.2 })
-  );
-  m.rotation.x = rotX;
-  m.castShadow = true;
-  return m;
-}
-
-function addWheels(group, positions, radius, width, color = 0x111111) {
-  for (const p of positions) {
-    const w = cyl(radius, radius, width, color, Math.PI / 2);
-    w.position.set(p.x, p.y, p.z);
-    w.name = 'wheel';
-    group.add(w);
-  }
-}
-
-export function createVehicleMesh(def) {
-  const g = new THREE.Group();
-  g.name = def.id;
-  const c = def.customization?.primaryColor ?? def.color;
-  const s = def.customization?.secondaryColor ?? def.secondaryColor;
-
-  if (def.isMotorcycle) {
-    buildMotorcycle(g, def, c, s);
-  } else if (def.id === 'metro_bus') {
-    buildBus(g, def, c, s);
-  } else if (def.id === 'city_van') {
-    buildVan(g, def, c, s);
-  } else if (def.id === 'cargo_king') {
-    buildPickup(g, def, c, s);
-  } else if (def.type === 'suv') {
-    buildSuv(g, def, c, s);
-  } else if (def.id === 'vortex_x' || def.id === 'falcon_sport') {
-    buildSport(g, def, c, s);
-  } else if (def.id === 'titan_muscle') {
-    buildMuscle(g, def, c, s);
-  } else {
-    buildSedan(g, def, c, s);
-  }
-
+export function createVehicleMesh(def){
+  const g=new THREE.Group(); g.name=def.id;
+  const c=def.customization?.primaryColor ?? def.color;
+  const s=def.customization?.secondaryColor ?? def.secondaryColor;
+  if(def.isMotorcycle) buildMotorcycle(g,def,c,s);
+  else if(def.id==='metro_bus') buildBus(g,def,c,s);
+  else if(def.id==='city_van') buildVan(g,def,c,s);
+  else if(def.id==='cargo_king') buildPickup(g,def,c,s);
+  else if(def.type==='suv') buildSuv(g,def,c,s);
+  else if(def.id==='vortex_x'||def.id==='falcon_sport') buildSport(g,def,c,s);
+  else if(def.id==='titan_muscle') buildMuscle(g,def,c,s);
+  else buildSedan(g,def,c,s);
   return g;
 }
 
-function buildSedan(g, def, c, s) {
-  const long = def.id === 'royal_executive' ? 4.8 : 4.2;
-  const wide = def.id === 'royal_executive' ? 1.95 : 1.75;
-  g.add(box(wide, 0.55, long, c, 0, 0.55, 0));
-  g.add(box(wide * 0.92, 0.48, long * 0.5, s, 0, 1.02, -0.15));
-  g.add(box(wide * 0.88, 0.08, 0.08, 0x88ccff, 0, 0.82, long * 0.48));
-  addWheels(g, [
-    { x: wide * 0.48, y: 0.32, z: long * 0.32 },
-    { x: -wide * 0.48, y: 0.32, z: long * 0.32 },
-    { x: wide * 0.48, y: 0.32, z: -long * 0.32 },
-    { x: -wide * 0.48, y: 0.32, z: -long * 0.32 }
-  ], 0.32, 0.22);
+function buildSedan(g,def,c,s){
+  const w=def.id==='royal_executive'?2.02:1.82,l=def.id==='royal_executive'?4.85:4.35;
+  g.add(mesh(new THREE.SphereGeometry(1,20,12),mat(c,.3,.5),0,.55,0)).scale.set(w*.62,.30,l*.62);
+  g.add(box(w*.96,.28,l*.55,s,0,.77,-.05,.25,.55));
+  g.add(box(w*.90,.12,l*.18,c,0,.58,l*.38,.25,.55));
+  windows(g,w,l,.98); lights(g,w,l); mirrors(g,w,.12); wheels4(g,w,l,.34,.34); aero(g,w,l,c,s,false);
 }
-
-function buildSport(g, def, c, s) {
-  const low = def.id === 'vortex_x';
-  g.add(box(1.85, 0.38, 4.4, c, 0, 0.42, 0));
-  g.add(box(1.7, 0.32, 2.0, s, 0, 0.75, -0.2));
-  g.add(box(1.6, 0.06, 0.8, 0x111111, 0, 0.32, 2.0));
-  if (low) g.add(box(1.4, 0.08, 0.4, c, 0, 0.85, -2.1)); // spoiler
-  g.add(box(1.7, 0.06, 0.06, 0x66ddff, 0, 0.55, 2.15));
-  addWheels(g, [
-    { x: 0.82, y: 0.28, z: 1.35 },
-    { x: -0.82, y: 0.28, z: 1.35 },
-    { x: 0.82, y: 0.28, z: -1.35 },
-    { x: -0.82, y: 0.28, z: -1.35 }
-  ], 0.30, 0.26);
+function buildSport(g,def,c,s){
+  const w=1.9,l=4.45;
+  g.add(mesh(new THREE.SphereGeometry(1,20,12),mat(c,.24,.58),0,.48,0)).scale.set(w*.66,.27,l*.65);
+  g.add(box(w*.92,.28,2.15,s,0,.72,-.12,.22,.62));
+  g.add(box(w*.82,.10,1.25,c,0,.60,1.45,.22,.62));
+  windows(g,w,l,.88); lights(g,w,l); mirrors(g,w,.0); wheels4(g,w,l,.31,.31); aero(g,w,l,c,s,true);
 }
-
-function buildMuscle(g, def, c, s) {
-  g.add(box(1.95, 0.5, 4.6, c, 0, 0.58, 0));
-  g.add(box(1.7, 0.4, 1.8, s, 0, 1.0, -0.35));
-  g.add(box(0.5, 0.12, 0.7, 0x222222, 0, 0.88, 1.4));
-  addWheels(g, [
-    { x: 0.9, y: 0.36, z: 1.45 },
-    { x: -0.9, y: 0.36, z: 1.45 },
-    { x: 0.9, y: 0.36, z: -1.45 },
-    { x: -0.9, y: 0.36, z: -1.45 }
-  ], 0.36, 0.28);
+function buildMuscle(g,def,c,s){
+  const w=2.0,l=4.65;
+  g.add(mesh(new THREE.SphereGeometry(1,20,12),mat(c,.32,.5),0,.58,0)).scale.set(w*.67,.31,l*.64);
+  g.add(box(w*.98,.34,1.75,s,0,.86,-.3,.25,.55));
+  g.add(box(w*.72,.12,.85,0x16181d,0,.72,1.55,.25,.7));
+  windows(g,w,l,.98); lights(g,w,l); mirrors(g,w,.05); wheels4(g,w,l,.37,.37); aero(g,w,l,c,s,true);
 }
-
-function buildSuv(g, def, c, s) {
-  const tall = def.id === 'mountain_beast';
-  const h = tall ? 1.15 : 0.95;
-  g.add(box(2.05, 0.6, 4.5, c, 0, 0.7, 0));
-  g.add(box(1.95, h * 0.7, 3.0, s, 0, 1.25, -0.2));
-  addWheels(g, [
-    { x: 0.95, y: tall ? 0.45 : 0.38, z: 1.45 },
-    { x: -0.95, y: tall ? 0.45 : 0.38, z: 1.45 },
-    { x: 0.95, y: tall ? 0.45 : 0.38, z: -1.45 },
-    { x: -0.95, y: tall ? 0.45 : 0.38, z: -1.45 }
-  ], tall ? 0.42 : 0.36, 0.28);
+function buildSuv(g,def,c,s){
+  const w=2.1,l=4.55,h=def.id==='mountain_beast'?1.16:1.02,r=def.id==='mountain_beast'?.43:.38;
+  g.add(box(w,.58,l,c,0,.68,0,.38,.42));
+  g.add(mesh(new THREE.SphereGeometry(1,18,10),mat(s,.34,.42),0,1.13,-.12)).scale.set(w*.60,h*.48,l*.37);
+  windows(g,w,l,1.18); lights(g,w,l); mirrors(g,w,.05); wheels4(g,w,l,r,def.id==='mountain_beast'?.45:.40); aero(g,w,l,c,s,false);
+  if(def.id==='mountain_beast'){ g.add(box(.08,.65,.08,0x2b2d32,w*.56,1.05,0,.3,.75)); g.add(box(.08,.65,.08,0x2b2d32,-w*.56,1.05,0,.3,.75)); }
 }
-
-function buildPickup(g, def, c, s) {
-  g.add(box(1.95, 0.55, 2.4, c, 0, 0.7, 0.7));
-  g.add(box(1.85, 0.7, 1.6, s, 0, 1.25, 0.85));
-  g.add(box(1.9, 0.45, 2.2, 0x333344, 0, 0.75, -1.3));
-  addWheels(g, [
-    { x: 0.92, y: 0.4, z: 1.4 },
-    { x: -0.92, y: 0.4, z: 1.4 },
-    { x: 0.92, y: 0.4, z: -1.4 },
-    { x: -0.92, y: 0.4, z: -1.4 }
-  ], 0.4, 0.28);
+function buildPickup(g,def,c,s){
+  const w=2.02,l=4.7;
+  g.add(box(w,.58,2.25,c,0,.72,.85,.35,.45));
+  g.add(mesh(new THREE.SphereGeometry(1,18,10),mat(s,.35,.42),0,1.13,.65)).scale.set(w*.60,.45,.52);
+  g.add(box(w*.94,.38,1.9,0x262b31,0,.72,-1.22,.28,.6));
+  windows(g,w,2.1,1.2); lights(g,w,l); mirrors(g,w,.75); wheels4(g,w,l,.40,.42);
+  g.add(box(w*.72,.10,1.8,s,0,.94,-1.25,.25,.55));
 }
-
-function buildVan(g, def, c, s) {
-  g.add(box(2.0, 1.6, 5.0, c, 0, 1.15, 0));
-  g.add(box(1.9, 0.5, 1.4, 0x88aacc, 0, 1.5, 1.7));
-  addWheels(g, [
-    { x: 0.95, y: 0.35, z: 1.5 },
-    { x: -0.95, y: 0.35, z: 1.5 },
-    { x: 0.95, y: 0.35, z: -1.5 },
-    { x: -0.95, y: 0.35, z: -1.5 }
-  ], 0.35, 0.26);
+function buildVan(g,def,c,s){
+  const w=2.05,l=5.05;
+  g.add(box(w,1.35,l,c,0,1.0,0,.28,.45));
+  g.add(mesh(new THREE.SphereGeometry(1,16,10),mat(s,.28,.45),0,1.45,-.25)).scale.set(w*.58,.50,l*.37);
+  g.add(box(w*.88,.55,.75,0x111923,0,1.46,1.72,.22,.65)); lights(g,w,l); mirrors(g,w,.25); wheels4(g,w,l,.36,.38); aero(g,w,l,c,s,false);
 }
-
-function buildBus(g, def, c, s) {
-  g.add(box(2.5, 2.4, 10.5, c, 0, 1.5, 0));
-  g.add(box(2.4, 0.7, 1.6, 0xaad4ff, 0, 1.7, 4.6));
-  const stripe = box(2.52, 0.18, 10.4, s, 0, 1.1, 0);
-  g.add(stripe);
-  addWheels(g, [
-    { x: 1.15, y: 0.4, z: 3.4 },
-    { x: -1.15, y: 0.4, z: 3.4 },
-    { x: 1.15, y: 0.4, z: -3.4 },
-    { x: -1.15, y: 0.4, z: -3.4 }
-  ], 0.42, 0.32);
+function buildBus(g,def,c,s){
+  const w=2.55,l=10.6;
+  g.add(box(w,2.35,l,c,0,1.45,0,.3,.42));
+  g.add(box(w*.96,.70,9.6,s,0,1.55,-.1,.22,.5));
+  for(const z of [-3.6,-1.2,1.2,3.6]) g.add(box(w*.94,.48,.055,0x111a24,0,1.9,z,.15,.7));
+  lights(g,w,l); wheels4(g,w,l,.44,.48);
 }
-
-function buildMotorcycle(g, def, c, s) {
-  const dirt = def.id === 'dirt_runner';
-  const r = dirt ? 0.38 : 0.32;
-  g.add(box(0.35, 0.28, 1.5, c, 0, 0.55, 0));
-  g.add(box(0.45, 0.12, 0.45, s, 0, 0.78, -0.15));
-  const fork = box(0.08, 0.5, 0.08, 0x222222, 0, 0.7, 0.7);
-  g.add(fork);
-  const wf = cyl(r, r, 0.12, 0x111111, Math.PI / 2);
-  wf.position.set(0, r, 0.75);
-  wf.name = 'wheel';
-  const wr = cyl(r, r, 0.12, 0x111111, Math.PI / 2);
-  wr.position.set(0, r, -0.7);
-  wr.name = 'wheel';
-  g.add(wf, wr);
-  g.add(box(0.55, 0.06, 0.08, 0x333333, 0, 1.05, 0.55));
+function buildMotorcycle(g,def,c,s){
+  const r=def.id==='dirt_runner'?.40:.33;
+  g.add(box(.32,.24,1.6,c,0,.55,0,.2,.55));
+  g.add(box(.42,.12,.55,s,0,.76,-.18,.2,.55));
+  const tank=mesh(new THREE.SphereGeometry(.36,14,10),mat(c,.25,.55),0,.70,.08); tank.scale.set(.8,.55,1.2); g.add(tank);
+  for(const z of [-.78,.82]){ const t=mesh(new THREE.TorusGeometry(r,r*.22,9,16),mat(0x090b0e,.9,.08)); t.rotation.y=Math.PI/2; t.position.set(0,r,z); t.name='wheel'; g.add(t); }
+  g.add(box(.07,.55,.07,0x252a30,.0,.76,.65,.25,.8));
+  g.add(box(.58,.06,.07,0x252a30,0,1.02,.58,.25,.8));
+  g.add(mesh(new THREE.SphereGeometry(.10,10,8),mat(0xeaf8ff,.1,.5,0x7fd8ff,2),0,.82,.88));
 }
