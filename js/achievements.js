@@ -12,7 +12,7 @@ export const ACHIEVEMENT_DEFS = [
   { id: 'speed_demon', name: 'Speed Demon', desc: 'Reach 200 km/h.' },
   { id: 'clean_driver', name: 'Clean Driver', desc: 'Complete a job with no damage.' },
   { id: 'collector', name: 'Vehicle Collector', desc: 'Own 5 vehicles.' },
-  { id: 'bike_rider', name: 'Bike Rider', desc: 'Ride a motorcycle.' },
+  { id: 'performance_driver', name: 'Performance Driver', desc: 'Drive a high-performance four-wheel car.' },
   { id: 'offroad_master', name: 'Off-Road Master', desc: 'Complete an off-road contract.' },
   { id: 'night_driver', name: 'Night Driver', desc: 'Drive at night.' },
   { id: 'rain_driver', name: 'Rain Driver', desc: 'Drive in the rain.' },
@@ -45,7 +45,7 @@ export function checkAchievements(state, flags) {
   if (flags.speed200) unlock('speed_demon');
   if (flags.cleanJob) unlock('clean_driver');
   if ((state.garage?.vehicles?.length || 0) >= 5) unlock('collector');
-  if (flags.bike) unlock('bike_rider');
+  if (flags.performance) unlock('performance_driver');
   if (flags.offroadJob) unlock('offroad_master');
   if (flags.night) unlock('night_driver');
   if (flags.rain) unlock('rain_driver');

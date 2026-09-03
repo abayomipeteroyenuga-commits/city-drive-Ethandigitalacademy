@@ -369,9 +369,13 @@ export class Game {
       this.state.activeVehicleId = owned.id;
       this._spawnOwnedVehicles();
       const actor = this.findActorByUid(owned.vehicleUid);
-      if (actor) this.enterVehicle(actor);
-      this.inMenu = false;
-      this.ui.setVehicleSelectionMode(false);
+      if (!actor) return false;
+      this.enterVehicle(actor);
+      this.persist();
+      // Critical: the WOW selection screen can be opened while the game canvas
+      // is hidden. Always perform a real world entry here so START LEVEL never
+      // leaves the player on a blank screen.
+      this.enterWorld(true, { startGrid: true });
       this.startCampaignMission();
       return true;
     }
@@ -382,9 +386,10 @@ export class Game {
     this.state.activeVehicleId = bought.id;
     this._spawnOwnedVehicles();
     const actor = this.findActorByUid(bought.vehicleUid);
-    if (actor) this.enterVehicle(actor);
-    this.inMenu = false;
-    this.ui.setVehicleSelectionMode(false);
+    if (!actor) return false;
+    this.enterVehicle(actor);
+    this.persist();
+    this.enterWorld(true, { startGrid: true });
     this.startCampaignMission();
     return true;
   }
@@ -489,7 +494,7 @@ export class Game {
       this.state.player.distanceDriven += (Math.abs(this.controller.speed) * dt) / 1000;
       this.flags.drove = true;
       if (kmh >= 200) this.flags.speed200 = true;
-      if (this.controller.def.isMotorcycle) this.flags.bike = true;
+      if (!this.controller.def.isMotorcycle && Number(this.controller.def.topSpeed || 0) >= 220) this.flags.performance = true;
       this.audio.updateEngine(kmh, this.controller.throttle, true, this.controller.def);
 
       this._missionUpdate(dt);
@@ -1019,7 +1024,7 @@ export class Game {
   startRace(race, opts = {}) {
     if (!race || this.mode !== 'driving' || !this.controller) { this.ui.toast('You must be driving to start a race'); return false; }
     if (!opts.campaign && this.activeMission?.kind === 'campaign') { this.ui.toast('FINISH THE CURRENT CAMPAIGN LEVEL FIRST'); return false; }
-    if (opts.campaign?.race === 'bike' && !this.controller.def.isMotorcycle) { this.ui.toast('This campaign race requires a motorcycle'); return false; }
+    if (opts.campaign?.race === 'bike') { this.ui.toast('This race has been upgraded to a four-wheel performance race'); return false; }
     this._clearRaceAI();
     this._clearRaceMarkers();
     this._clearMissionWaypoint();
@@ -1164,7 +1169,7 @@ export class Game {
   }
 
   _separateDynamicCars(cars, playerMesh = null, playerController = null) {
-    const radiusOf = (def) => def?.id === 'metro_bus' ? 5.7 : def?.isMotorcycle ? 1.25 : 2.45;
+    const radiusOf = (def) => 2.45;
     for (let i = 0; i < cars.length; i++) {
       const a = cars[i];
       if (!a?.mesh) continue;

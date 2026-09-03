@@ -55,11 +55,8 @@ function createDriver(def) {
   const driver = human(0x2457a6, 0x8b5a3c);
   driver.name = 'NPCDriver';
   // Sit inside the cabin, slightly above the body shell so the head/arms are visible.
-  const isBus = def.id === 'metro_bus';
-  const isBike = !!def.isMotorcycle;
-  driver.scale.setScalar(isBike ? 0.82 : 0.9);
-  driver.position.set(0, isBike ? 0.34 : 0.48, isBus ? 0.85 : 0.18);
-  if (isBike) driver.position.z = 0.02;
+  driver.scale.setScalar(0.9);
+  driver.position.set(0, 0.48, 0.18);
   driver.userData.driver = true;
   return driver;
 }
@@ -91,7 +88,7 @@ export class NPCSystem {
 
   spawn(densityT = 0.7, densityP = 0.6) {
     const colors = [0xcc2222, 0x2266cc, 0xe5e5e5, 0x20252b, 0x2e9b63, 0xc99a20, 0xeeeeee, 0x5522aa];
-    const trafficIds = ['street_metro','street_exec','street_hatch','street_family_hatch','street_compact_suv','street_urban_suv','street_lux_suv','street_mpv','street_taxi','street_van','street_pickup','street_offroad_pickup','metro_s','urban_lx','city_explorer','grand_terrain','cargo_king','city_van'];
+    const trafficIds = ['metro_s','urban_lx','falcon_sport','titan_muscle','royal_executive','vortex_x','city_explorer','grand_terrain','mountain_beast','street_hawk','thunder_r','dirt_runner','cargo_king','city_van','metro_bus'];
     const nT = Math.floor(24 * Math.min(1, Math.max(0, densityT)));
     const nP = Math.floor(18 * Math.min(1, Math.max(0, densityP)));
 
@@ -104,7 +101,7 @@ export class NPCSystem {
       const driver = createDriver(mesh.userData.vehicleDef || {});
       mesh.add(driver);
       this.scene.add(mesh);
-      const radius = mesh.userData.vehicleDef?.id === 'metro_bus' ? 5.7 : mesh.userData.vehicleDef?.isMotorcycle ? 1.25 : 2.45;
+      const radius = 2.45;
       this.traffic.push({ mesh, driver, radius, speed: 12 + (i % 5) * 2, currentSpeed: 12 + (i % 5) * 2, heading, axis: i % 2 === 0 ? 'z' : 'x', blocked: 0, anim: i * 0.6 });
     }
 
@@ -155,7 +152,7 @@ export class NPCSystem {
     if (!playerMesh) return;
     const dx = playerMesh.position.x - t.mesh.position.x;
     const dz = playerMesh.position.z - t.mesh.position.z;
-    const playerRadius = playerController?.def?.id === 'metro_bus' ? 5.7 : playerController?.def?.isMotorcycle ? 1.25 : 2.45;
+    const playerRadius = 2.45;
     const minDist = t.radius + playerRadius;
     const d2 = dx * dx + dz * dz;
     if (d2 >= minDist * minDist) return;

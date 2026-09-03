@@ -37,11 +37,11 @@ function css(){
  #cityWowMenu .selected-panel{margin-top:12px;display:flex;justify-content:space-between;gap:12px;align-items:center;
    border-top:1px solid rgba(255,255,255,.08);padding-top:13px}
  #cityWowMenu .selected-showcase{position:relative;height:185px;margin:12px 0 0;border-radius:16px;overflow:hidden;background:radial-gradient(circle at 65% 40%,rgba(0,212,255,.12),transparent 38%),linear-gradient(145deg,#0a1220,#050912);border:1px solid rgba(255,255,255,.08)}
- #cityWowMenu .showcase-car{position:absolute;left:8%;right:6%;bottom:23%;height:42%;background:linear-gradient(150deg,#f2f5f8,#708092 25%,#1a2b3b 60%,#060b12);border-radius:28% 42% 15% 12%;box-shadow:inset 0 3px 7px rgba(255,255,255,.65),inset 0 -18px 25px rgba(0,0,0,.75),0 25px 35px rgba(0,0,0,.55);transform:skewX(-4deg)}
+ #cityWowMenu .showcase-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 58%;filter:saturate(1.08) contrast(1.08);display:none}.showcase-photo.gwagon{display:block}.showcase-photo-overlay{position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,9,18,.88) 0%,rgba(5,9,18,.22) 48%,rgba(5,9,18,.45) 100%),linear-gradient(0deg,rgba(3,6,12,.72),transparent 48%);pointer-events:none}.showcase-car{position:absolute;left:8%;right:6%;bottom:23%;height:42%;background:linear-gradient(150deg,#f2f5f8,#708092 25%,#1a2b3b 60%,#060b12);border-radius:28% 42% 15% 12%;box-shadow:inset 0 3px 7px rgba(255,255,255,.65),inset 0 -18px 25px rgba(0,0,0,.75),0 25px 35px rgba(0,0,0,.55);transform:skewX(-4deg)}
  #cityWowMenu .showcase-car:before{content:"";position:absolute;left:27%;top:-48%;width:42%;height:62%;background:linear-gradient(145deg,#bdcad6,#1c3042);clip-path:polygon(20% 100%,32% 15%,73% 0,100% 100%);border-radius:18px}
  #cityWowMenu .showcase-car:after{content:"";position:absolute;left:35%;top:-34%;width:31%;height:28%;background:linear-gradient(145deg,#07121d,#315067);clip-path:polygon(12% 100%,28% 10%,100% 0,100% 100%);border:1px solid rgba(180,230,255,.35)}
  #cityWowMenu .showcase-wheel{position:absolute;bottom:-20%;width:17%;aspect-ratio:1;border-radius:50%;background:#030507;border:9px solid #151d27;box-shadow:inset 0 0 0 5px #667381}
- #cityWowMenu .showcase-wheel.a{left:14%}.showcase-wheel.b{right:14%}
+ #cityWowMenu .showcase-wheel.a{left:12%}.showcase-wheel.b{left:34%}.showcase-wheel.c{right:34%}.showcase-wheel.d{right:12%}
  #cityWowMenu .showcase-label{position:absolute;top:14px;left:16px;font-size:9px;letter-spacing:.2em;color:#7890aa;font-weight:900}
  #cityWowMenu .showcase-name{position:absolute;right:16px;top:13px;text-align:right;font-size:11px;font-weight:900}
  #cityWowMenu .selected-name{font-size:18px;font-weight:900}
@@ -51,6 +51,10 @@ function css(){
  #cityWowMenu .continue{background:#fff;color:#07101e}
  #cityWowMenu .continue:disabled{opacity:.35;cursor:not-allowed}
  #cityWowMenu .secondary{background:#18243a;color:#fff;border:1px solid rgba(255,255,255,.1)!important}
+ #cityWowMenu .wow-lineup{position:relative;height:150px;margin:0 0 12px;border-radius:15px;overflow:hidden;border:1px solid rgba(255,255,255,.09);background:#0a1019}
+ #cityWowMenu .wow-lineup img{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(1.12) contrast(1.06);opacity:.88}
+ #cityWowMenu .wow-lineup-overlay{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:14px;background:linear-gradient(0deg,rgba(2,6,12,.9),rgba(2,6,12,.05) 70%);}
+ #cityWowMenu .wow-lineup-overlay strong{font-size:18px;letter-spacing:.06em}.wow-lineup-overlay span{font-size:9px;color:#b2c0d0;letter-spacing:.13em;margin-top:4px}
  #cityWowMenu .wow-features{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
  #cityWowMenu .feature{padding:14px;border-radius:13px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07)}
  #cityWowMenu .feature strong{display:block;font-size:13px;margin-bottom:4px}
@@ -61,20 +65,18 @@ function css(){
 
  #cityWowMenu .wow-section-label{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px}
  #cityWowMenu .wow-section-label strong{font-size:11px;letter-spacing:.14em;color:#7f91a8}
- #cityWowMenu .wow-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-bottom:10px}
+ #cityWowMenu .wow-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:10px}
  #cityWowMenu .wow-tab{border:1px solid rgba(255,255,255,.09);background:#0e1728;color:#9eacc0;border-radius:9px;padding:9px 5px;font-size:10px;font-weight:900;cursor:pointer;letter-spacing:.04em}
  #cityWowMenu .wow-tab:hover{background:#16233a;color:#fff}
  #cityWowMenu .wow-tab.active{color:#fff;border-color:var(--tab-accent);background:color-mix(in srgb,var(--tab-accent) 18%,#0e1728);box-shadow:0 0 0 1px color-mix(in srgb,var(--tab-accent) 25%,transparent)}
  #cityWowMenu .wow-tab[data-filter="car"]{--tab-accent:#00d4ff}
  #cityWowMenu .wow-tab[data-filter="suv"]{--tab-accent:#00ff9d}
- #cityWowMenu .wow-tab[data-filter="motorcycle"]{--tab-accent:#ff4d8d}
- #cityWowMenu .wow-tab[data-filter="commercial"]{--tab-accent:#ffb52e}
+  #cityWowMenu .wow-tab[data-filter="commercial"]{--tab-accent:#ffb52e}
  #cityWowMenu .car-btn{position:relative}
  #cityWowMenu .car-btn .car-type-chip{display:inline-block;margin-top:4px;padding:2px 5px;border-radius:4px;font-size:8px;font-weight:900;letter-spacing:.06em;background:rgba(255,255,255,.06);color:#8fa0b8}
  #cityWowMenu .car-btn[data-type="car"]{--type-accent:#00d4ff}
  #cityWowMenu .car-btn[data-type="suv"]{--type-accent:#00ff9d}
- #cityWowMenu .car-btn[data-type="motorcycle"]{--type-accent:#ff4d8d}
- #cityWowMenu .car-btn[data-type="commercial"]{--type-accent:#ffb52e}
+  #cityWowMenu .car-btn[data-type="commercial"]{--type-accent:#ffb52e}
  #cityWowMenu .car-btn.selected{border-color:var(--type-accent,#67a5ff);box-shadow:0 0 0 2px color-mix(in srgb,var(--type-accent,#67a5ff) 20%,transparent)}
  @media(max-width:760px){#cityWowMenu .wow-grid{grid-template-columns:1fr}.car-grid{grid-template-columns:repeat(2,1fr)!important}}
  #cityWowMenu:has(.front-shell){background:#03060c;overflow:hidden}
@@ -83,7 +85,7 @@ function css(){
  #cityWowMenu .front-noise{position:absolute;inset:0;opacity:.12;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:70px 70px;transform:perspective(500px) rotateX(58deg) translateY(35%);transform-origin:center bottom}
  #cityWowMenu .front-top{position:absolute;top:30px;left:5vw;right:5vw;display:flex;justify-content:space-between;align-items:center;z-index:5;font-weight:900;letter-spacing:.18em;font-size:.7rem}.front-brand{color:#fff}.front-live{color:#8191a7}.front-live i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#00ff9d;box-shadow:0 0 14px #00ff9d;margin-right:7px}
  #cityWowMenu .front-copy{position:absolute;z-index:5;left:6vw;top:18%;max-width:520px}.front-kicker{color:#00d4ff;font-size:.68rem;font-weight:900;letter-spacing:.27em;margin-bottom:14px}.front-copy h1{font-size:clamp(4.5rem,10vw,9rem);line-height:.76;margin:0;font-weight:1000;letter-spacing:-.07em;text-shadow:0 18px 60px #000}.front-copy h1 em{font-style:normal;background:linear-gradient(90deg,#fff,#00d4ff 60%,#7b5cff);-webkit-background-clip:text;color:transparent}.front-copy p{font-size:.92rem;letter-spacing:.25em;color:#aebdce;margin:26px 0 16px}.front-rule{width:170px;height:2px;background:linear-gradient(90deg,#00d4ff,transparent);margin-bottom:24px}.front-actions{display:flex;gap:10px}.front-actions button{border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:14px 22px;font-weight:950;letter-spacing:.08em;cursor:pointer}.front-actions #frontStart{background:#fff;color:#06101a;box-shadow:0 12px 35px rgba(255,255,255,.12)}.front-actions #frontContinue{background:rgba(8,16,29,.72);color:#fff}.front-actions button:hover{transform:translateY(-2px);filter:brightness(1.08)}.front-copy>small{display:block;margin-top:16px;color:#60728a;font-size:.54rem;letter-spacing:.16em}
- #cityWowMenu .front-car{position:absolute;z-index:3;right:4vw;bottom:15%;width:min(61vw,850px);height:42vh;min-height:220px;filter:drop-shadow(0 30px 30px rgba(0,0,0,.7));transform:perspective(900px) rotateY(-7deg);animation:frontCarFloat 5s ease-in-out infinite}.front-car .car-shadow{position:absolute;left:5%;right:3%;bottom:4%;height:18%;border-radius:50%;background:rgba(0,0,0,.8);filter:blur(18px)}.front-car .car-body{position:absolute;left:4%;right:4%;bottom:17%;height:48%;background:linear-gradient(155deg,#dce7f1 0%,#718496 23%,#172b3d 54%,#07101a 100%);border-radius:30% 45% 18% 12% / 45% 55% 20% 18%;box-shadow:inset 0 3px 8px rgba(255,255,255,.8),inset 0 -22px 30px rgba(0,0,0,.7),0 20px 40px rgba(0,212,255,.08)}.front-car .car-roof{position:absolute;left:30%;top:-35%;width:38%;height:60%;background:linear-gradient(150deg,#c8d6e4,#243a4e);clip-path:polygon(18% 100%,35% 12%,73% 0,100% 100%);border-radius:20px}.front-car .car-window{position:absolute;top:-27%;height:37%;background:linear-gradient(145deg,#06121e,#29475c);border:1px solid rgba(180,230,255,.4);clip-path:polygon(18% 100%,32% 15%,100% 0,100% 100%)}.front-car .window-a{left:34%;width:15%}.front-car .window-b{left:50%;width:17%;transform:scaleX(-1)}.front-car .car-hood{position:absolute;right:-2%;top:13%;width:38%;height:48%;background:linear-gradient(160deg,#eef5fb,#65798b 35%,#122536 75%);clip-path:polygon(0 26%,82% 0,100% 76%,35% 100%)}.front-car .car-front{position:absolute;right:-1%;bottom:4%;width:30%;height:42%;background:linear-gradient(90deg,#172b3b,#02070c);clip-path:polygon(35% 0,100% 18%,100% 85%,65% 100%,0 70%);border-radius:0 20px 16px 0}.front-car .car-light{position:absolute;right:7%;top:23%;width:13%;height:8%;background:#dffaff;border-radius:60% 10%;box-shadow:0 0 20px #8fefff,0 0 55px rgba(0,212,255,.65);transform:skewX(-25deg)}.front-car .light-a{right:19%}.front-car .light-b{right:7%}.front-car .car-wheel{position:absolute;bottom:-12%;width:18%;aspect-ratio:1;border-radius:50%;background:#030508;border:10px solid #111923;box-shadow:inset 0 0 0 7px #526274,0 8px 12px #000}.front-car .wheel-a{left:15%}.front-car .wheel-b{right:16%}.front-car .car-wheel span{position:absolute;inset:23%;border-radius:50%;background:#d3dbe2;box-shadow:inset 0 0 0 5px #657381}.front-car .car-line{position:absolute;left:5%;right:7%;top:52%;height:2px;background:rgba(255,255,255,.35);box-shadow:0 14px 20px rgba(0,0,0,.5)}@keyframes frontCarFloat{0%,100%{transform:perspective(900px) rotateY(-7deg) translateY(0)}50%{transform:perspective(900px) rotateY(-7deg) translateY(-7px)}}
+ #cityWowMenu .front-car{position:absolute;z-index:3;right:4vw;bottom:15%;width:min(61vw,850px);height:42vh;min-height:220px;filter:drop-shadow(0 30px 30px rgba(0,0,0,.7));transform:perspective(900px) rotateY(-7deg);animation:frontCarFloat 5s ease-in-out infinite}.front-gwagon-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center;filter:saturate(1.12) contrast(1.08) drop-shadow(0 28px 22px rgba(0,0,0,.72));mix-blend-mode:screen}.front-car .car-shadow{position:absolute;left:5%;right:3%;bottom:4%;height:18%;border-radius:50%;background:rgba(0,0,0,.8);filter:blur(18px)}.front-car .car-body{position:absolute;left:4%;right:4%;bottom:17%;height:48%;background:linear-gradient(155deg,#dce7f1 0%,#718496 23%,#172b3d 54%,#07101a 100%);border-radius:30% 45% 18% 12% / 45% 55% 20% 18%;box-shadow:inset 0 3px 8px rgba(255,255,255,.8),inset 0 -22px 30px rgba(0,0,0,.7),0 20px 40px rgba(0,212,255,.08)}.front-car .car-roof{position:absolute;left:30%;top:-35%;width:38%;height:60%;background:linear-gradient(150deg,#c8d6e4,#243a4e);clip-path:polygon(18% 100%,35% 12%,73% 0,100% 100%);border-radius:20px}.front-car .car-window{position:absolute;top:-27%;height:37%;background:linear-gradient(145deg,#06121e,#29475c);border:1px solid rgba(180,230,255,.4);clip-path:polygon(18% 100%,32% 15%,100% 0,100% 100%)}.front-car .window-a{left:34%;width:15%}.front-car .window-b{left:50%;width:17%;transform:scaleX(-1)}.front-car .car-hood{position:absolute;right:-2%;top:13%;width:38%;height:48%;background:linear-gradient(160deg,#eef5fb,#65798b 35%,#122536 75%);clip-path:polygon(0 26%,82% 0,100% 76%,35% 100%)}.front-car .car-front{position:absolute;right:-1%;bottom:4%;width:30%;height:42%;background:linear-gradient(90deg,#172b3b,#02070c);clip-path:polygon(35% 0,100% 18%,100% 85%,65% 100%,0 70%);border-radius:0 20px 16px 0}.front-car .car-light{position:absolute;right:7%;top:23%;width:13%;height:8%;background:#dffaff;border-radius:60% 10%;box-shadow:0 0 20px #8fefff,0 0 55px rgba(0,212,255,.65);transform:skewX(-25deg)}.front-car .light-a{right:19%}.front-car .light-b{right:7%}.front-car .car-wheel{position:absolute;bottom:-12%;width:18%;aspect-ratio:1;border-radius:50%;background:#030508;border:10px solid #111923;box-shadow:inset 0 0 0 7px #526274,0 8px 12px #000}.front-car .wheel-a{left:15%}.front-car .wheel-b{right:16%}.front-car .car-wheel span{position:absolute;inset:23%;border-radius:50%;background:#d3dbe2;box-shadow:inset 0 0 0 5px #657381}.front-car .car-line{position:absolute;left:5%;right:7%;top:52%;height:2px;background:rgba(255,255,255,.35);box-shadow:0 14px 20px rgba(0,0,0,.5)}@keyframes frontCarFloat{0%,100%{transform:perspective(900px) rotateY(-7deg) translateY(0)}50%{transform:perspective(900px) rotateY(-7deg) translateY(-7px)}}
  #cityWowMenu .front-footer{position:absolute;z-index:5;bottom:22px;left:5vw;right:5vw;display:flex;justify-content:space-between;color:#52647a;font-size:.5rem;letter-spacing:.18em}.front-footer span:nth-child(2){color:#7d8da1}
  @media(max-width:800px){#cityWowMenu .front-top{top:18px}.front-copy{left:7vw;top:15%;max-width:78vw}.front-copy h1{font-size:clamp(3.8rem,18vw,6rem)}.front-copy p{font-size:.65rem}.front-car{right:-18vw!important;bottom:13%!important;width:95vw!important;height:36vh!important;opacity:.8}.front-actions{flex-direction:column;width:190px}.front-actions button{padding:12px}.front-footer span:nth-child(2){display:none}}
   `;
@@ -124,11 +126,10 @@ function openVehicleSelection(){
          <button class="wow-tab active" data-filter="all">ALL</button>
          <button class="wow-tab" data-filter="car">CARS</button>
          <button class="wow-tab" data-filter="suv">SUVS</button>
-         <button class="wow-tab" data-filter="motorcycle">BIKES</button>
          <button class="wow-tab" data-filter="commercial">COMMERCIAL</button>
        </div>
        <div class="car-grid" id="wowCarGrid"></div>
-       <div class="selected-showcase"><div class="showcase-label">SELECTED VEHICLE</div><div class="showcase-name" id="wowShowcaseName">G-WAGON</div><div class="showcase-car"><div class="showcase-wheel a"></div><div class="showcase-wheel b"></div></div></div>
+       <div class="selected-showcase"><img class="showcase-photo" id="wowShowcasePhoto" src="assets/gwagon-cut.png" alt="G-Wagon reference"/><div class="showcase-photo-overlay"></div><div class="showcase-label">SELECTED VEHICLE</div><div class="showcase-name" id="wowShowcaseName">G-WAGON</div><div class="showcase-car" id="wowCssShowcaseCar"><div class="showcase-wheel a"></div><div class="showcase-wheel b"></div><div class="showcase-wheel c"></div><div class="showcase-wheel d"></div></div></div>
        <div class="selected-panel">
          <div><div class="selected-name" id="wowSelectedName">Choose a car</div><div class="selected-meta" id="wowSelectedMeta">Level 1 is locked until you choose.</div></div>
          <div>🚗</div>
@@ -141,9 +142,13 @@ function openVehicleSelection(){
      <section class="wow-card">
        <h2>City Drive</h2>
        <p>Start with the world, then master the streets.</p>
+       <div class="wow-lineup" aria-label="CITY DRIVE four-wheel vehicle lineup">
+         <img src="assets/car-variety-reference.jpg" alt="CITY DRIVE car variety reference"/>
+         <div class="wow-lineup-overlay"><strong>15 FOUR-WHEEL RIDES</strong><span>SPORTS CARS • SUVS • PERFORMANCE • UTILITY</span></div>
+       </div>
        <div class="wow-features">
          <div class="feature"><strong>🌆 Living City</strong><span>Roads, districts and points of interest.</span></div>
-         <div class="feature"><strong>🚦 Street Traffic</strong><span>Everyday cars moving through the city.</span></div>
+         <div class="feature"><strong>🚦 Street Traffic</strong><span>Everyday four-wheel cars moving through the city.</span></div>
          <div class="feature"><strong>🏁 Level 1</strong><span>Your first driving challenge begins after selection.</span></div>
          <div class="feature"><strong>🎮 Full Control</strong><span>Keyboard and game controls ready.</span></div>
        </div>
@@ -155,9 +160,8 @@ function openVehicleSelection(){
 
  var grid=el.querySelector("#wowCarGrid");
  function carType(car){
-   if(car.isMotorcycle || String(car.type||'').toLowerCase().includes('motor')) return 'motorcycle';
    var t=String(car.type||car.class||'').toLowerCase();
-   if(t.includes('commercial') || /bus|van|cargo|truck/.test(String(car.name||'').toLowerCase())) return 'commercial';
+   if(t.includes('commercial') || /van|cargo|truck|pickup/.test(String(car.name||'').toLowerCase())) return 'commercial';
    if(t.includes('suv')) return 'suv';
    return 'car';
  }
@@ -175,6 +179,10 @@ function openVehicleSelection(){
      el.querySelector("#wowSelectedName").textContent=car.name||car.id;
      el.querySelector("#wowShowcaseName").textContent=(car.name||car.id).toUpperCase();
      el.querySelector("#wowSelectedMeta").textContent=(car.class||"street").toUpperCase()+"  •  "+(car.topSpeed?Math.round(car.topSpeed*3.6)+" km/h":"READY");
+     var photo=el.querySelector("#wowShowcasePhoto"), cssCar=el.querySelector("#wowCssShowcaseCar");
+     var isGw=car.id==='metro_s' || String(car.name||'').toLowerCase().includes('g-wagon');
+     if(photo) photo.classList.toggle('gwagon',isGw);
+     if(cssCar) cssCar.style.display=isGw?'none':'';
      el.querySelector("#wowStart").disabled=false;
      el.querySelector(".level-card span").textContent="✓ Ready to start";
    };
@@ -237,9 +245,10 @@ function openVehicleSelection(){
    el.remove();
    var mm=document.getElementById('main-menu');
    var gc=document.getElementById('game-container');
-   if(mm) mm.classList.remove('hidden');
+   if(mm) mm.classList.add('hidden');
    if(gc) gc.classList.add('hidden');
-};
+   open();
+ };
 }
 
 function open(){
@@ -258,12 +267,8 @@ function open(){
      <small>OPEN WORLD • 20 CAMPAIGN LEVELS • RACES • JOBS</small>
    </div>
    <div class="front-car" aria-hidden="true">
-     <div class="car-shadow"></div><div class="car-body">
-       <div class="car-roof"></div><div class="car-window window-a"></div><div class="car-window window-b"></div>
-       <div class="car-hood"></div><div class="car-front"></div><div class="car-light light-a"></div><div class="car-light light-b"></div>
-       <div class="car-wheel wheel-a"><span></span></div><div class="car-wheel wheel-b"><span></span></div>
-       <div class="car-line"></div>
-     </div>
+     <div class="car-shadow"></div>
+     <img class="front-gwagon-photo" src="assets/gwagon-cut.png" alt="Mercedes-Benz G-Wagon"/>
    </div>
    <div class="front-footer"><span>NOVA CITY</span><span>ETHAN DIGITAL ACADEMY</span><span>LEARN • BUILD • GROW • LEAD</span></div>
  </div>`;

@@ -37,17 +37,17 @@ export function createVehicleMesh(def){
   const c=def.customization?.primaryColor ?? def.color;
   const s=def.customization?.secondaryColor ?? def.secondaryColor;
   if(def.isMotorcycle) buildMotorcycle(g,def,c,s);
-  else if(def.id==='metro_bus') buildBus(g,def,c,s);
+  else if(def.id==='metro_bus') buildSport(g,def,c,s);
   else if(def.id==='city_van'||def.id==='street_van'||def.id==='delivery_van') buildVan(g,def,c,s);
   else if(def.id==='cargo_king'||def.id==='street_pickup'||def.id==='street_offroad_pickup'||def.id==='pickup'||def.id==='offroad_pickup') buildPickup(g,def,c,s);
   else if(def.id==='street_hatch'||def.id==='street_family_hatch'||def.id==='city_hatch'||def.id==='family_hatch') buildHatch(g,def,c,s);
   else if(def.id==='street_mpv'||def.id==='family_mpv') buildMpv(g,def,c,s);
   else if(def.id==='street_taxi'||def.id==='city_taxi') buildTaxi(g,def,c,s);
-  else if(def.id==='metro_s' && def.type==='suv') buildSuv(g,def,c,s);
+  else if(def.id==='metro_s' && def.type==='suv') buildGwagon(g,def,c,s);
   else if(def.id==='street_metro'||def.id==='street_exec'||def.id==='metro_sedan'||def.id==='urban_lx'||def.id==='executive_sedan') buildSedan(g,def,c,s);
   else if(def.id==='street_compact_suv'||def.id==='street_urban_suv'||def.id==='street_lux_suv'||def.id==='compact_suv'||def.id==='urban_suv'||def.id==='luxury_suv') buildSuv(g,def,c,s);
   else if(def.type==='suv') buildSuv(g,def,c,s);
-  else if(def.id==='vortex_x'||def.id==='falcon_sport') buildSport(g,def,c,s);
+  else if(def.id==='vortex_x'||def.id==='falcon_sport'||def.id==='street_hawk'||def.id==='thunder_r'||def.id==='metro_bus') buildSport(g,def,c,s);
   else if(def.id==='titan_muscle') buildMuscle(g,def,c,s);
   else buildSedan(g,def,c,s);
   return g;
@@ -94,6 +94,45 @@ function buildMuscle(g,def,c,s){
   g.add(box(w*.72,.12,.85,0x16181d,0,.72,1.55,.25,.7));
   windows(g,w,l,.98); lights(g,w,l); mirrors(g,w,.05); wheels4(g,w,l,.37,.37); aero(g,w,l,c,s,true);
 }
+function buildGwagon(g,def,c,s){
+  // Boxy luxury 4x4 silhouette based on the user's supplied G-Wagon reference:
+  // tall squared cabin, upright front, round lamps, wide stance and rear spare.
+  const w=2.22,l=4.72;
+  g.add(box(w,.62,l,c,0,.66,0,.18,.5));
+  g.add(box(w*.96,.52,1.18,c,0,1.02,1.48,.12,.48)); // upright hood
+  g.add(box(w*.94,1.02,2.72,c,0,1.32,-.18,.10,.46)); // tall cabin
+  g.add(box(w*.98,.12,2.82,s,0,1.88,-.18,.08,.6)); // flat roof
+  const glass=mat(0x0b1824,.10,.78,0x07111d,.22);
+  // windshield and rear glass
+  const wind=mesh(new THREE.BoxGeometry(w*.82,.055,.72),glass,0,1.48,1.18); wind.rotation.x=-0.12; g.add(wind);
+  g.add(mesh(new THREE.BoxGeometry(w*.82,.055,.62),glass,0,1.48,-1.54));
+  // large side windows
+  for(const x of [-w*.485,w*.485]){
+    const side=mesh(new THREE.BoxGeometry(.045,.62,2.02),glass,x,1.48,-.10);
+    side.rotation.z=x<0?-0.015:0.015; g.add(side);
+  }
+  // pillars and roof rails
+  for(const x of [-w*.49,w*.49]){ g.add(box(.055,.78,.07,s,x,1.48,.86,.08,.72)); g.add(box(.055,.78,.07,s,x,1.48,-.92,.08,.72)); g.add(box(.06,.08,2.95,s,x,1.96,-.18,.06,.75)); }
+  // signature upright front grille
+  g.add(box(w*.50,.48,.075,0x111820,0,.91,2.39,.08,.8));
+  g.add(box(w*.68,.055,.08,0x5f6972,0,1.16,2.405,.04,.9));
+  g.add(box(w*.08,.26,.09,0x5f6972,0,1.02,2.42,.03,.9));
+  // round headlights
+  const lamp=mat(0xf4fbff,.08,.45,0x8edcff,2.8);
+  for(const x of [-w*.34,w*.34]) g.add(mesh(new THREE.CylinderGeometry(.18,.18,.07,20),lamp,x,1.10,2.44).rotateX(Math.PI/2));
+  // black bumper and running boards
+  g.add(box(w*1.02,.20,.22,0x171b20,0,.53,2.34,.08,.65));
+  g.add(box(w*1.02,.18,.20,0x171b20,0,.53,-2.34,.08,.65));
+  for(const x of [-w*.56,w*.56]) g.add(box(.12,.10,3.0,0x171b20,x,.58,-.05,.04,.7));
+  wheels4(g,w,l,.43,.42);
+  // rear-mounted spare wheel, a key G-Wagon visual cue
+  const spare=mesh(new THREE.TorusGeometry(.43,.095,12,24),mat(0x090b0e,.88,.10),0,.96,-2.40); spare.rotation.x=Math.PI/2; g.add(spare);
+  const hub=mesh(new THREE.CylinderGeometry(.17,.17,.10,16),mat(0x8e969e,.22,.82),0,.96,-2.42); hub.rotation.x=Math.PI/2; g.add(hub);
+  // rear light bars
+  const tail=mat(0xff1526,.18,.35,0xff0010,1.8);
+  for(const x of [-w*.38,w*.38]) g.add(mesh(new THREE.BoxGeometry(.22,.14,.07),tail,x,.88,-2.39));
+}
+
 function buildSuv(g,def,c,s){
   const w=def.id==='metro_s'?2.18:2.1,l=def.id==='metro_s'?4.65:4.55,h=def.id==='mountain_beast'?1.16:(def.id==='metro_s'?1.22:1.02),r=def.id==='mountain_beast'?.43:(def.id==='metro_s'?.40:.38);
   g.add(box(w,.58,l,c,0,.68,0,.38,.42));

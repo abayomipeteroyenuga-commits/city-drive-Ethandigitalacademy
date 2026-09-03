@@ -53,8 +53,7 @@ export class UI {
     if (selected < 0) selected = 0;
     let filter = 'ALL';
 
-    const category = v => v.isMotorcycle ? 'BIKES' :
-      (['suv','offroad'].includes(v.type) ? 'SUVS' :
+    const category = v => (['suv','offroad'].includes(v.type) ? 'SUVS' :
       (['pickup','van','bus','commercial'].includes(v.type) ? 'WORK' : 'CARS'));
     const visible = () => catalog.map((v, i) => ({v, i})).filter(x => filter === 'ALL' || category(x.v) === filter);
 
@@ -81,7 +80,7 @@ export class UI {
           <p>Step into the city with a machine that matches your style. Browse it. Own it. Drive it.</p>
         </div>
 
-        <div class="showroom-vehicle-name"><div class="selected-ride-flag">NOW DRIVING PREVIEW</div><span>${v.isMotorcycle ? 'POWER BIKE' : category(v) === 'SUVS' ? 'SUV / OFF-ROAD' : category(v) === 'WORK' ? 'COMMERCIAL' : 'PERFORMANCE CAR'}</span><h2>${v.name}</h2><small>${v.manufacturer || 'CITY DRIVE'} · ${v.topSpeed} KM/H</small></div>
+        <div class="showroom-vehicle-name"><div class="selected-ride-flag">NOW DRIVING PREVIEW</div><span>${category(v) === 'SUVS' ? 'SUV / OFF-ROAD' : category(v) === 'WORK' ? 'UTILITY / COMMERCIAL' : 'PERFORMANCE CAR'}</span><h2>${v.name}</h2><small>${v.manufacturer || 'CITY DRIVE'} · ${v.topSpeed} KM/H</small></div>
 
         <div class="showroom-bottom">
           <section class="showroom-detail">
@@ -93,7 +92,7 @@ export class UI {
           </section>
 
           <section class="showroom-picker">
-            <nav class="showroom-tabs">${['ALL','CARS','SUVS','BIKES','WORK'].map(c => `<button class="showroom-tab ${filter===c?'active':''}" data-filter="${c}">${c}</button>`).join('')}</nav>
+            <nav class="showroom-tabs">${['ALL','CARS','SUVS','WORK'].map(c => `<button class="showroom-tab ${filter===c?'active':''}" data-filter="${c}">${c}</button>`).join('')}</nav>
             <div class="clean-browse"><button class="browse-arrow" data-browse="prev" aria-label="Previous ride">‹</button><div><span>SELECTED RIDE</span><strong>${Math.max(0, selectedVisible + 1)} / ${items.length}</strong><small>Use A / D or the arrows to browse</small></div><button class="browse-arrow" data-browse="next" aria-label="Next ride">›</button></div>
           </section>
         </div>
@@ -796,7 +795,7 @@ export class UI {
 
   openHowTo() {
     this.openPanel('HOW TO PLAY', `
-      <p>$20,000 or $50,000 City Cash to start. Choose from cars, SUVs, power bikes and commercial vehicles.</p>
+      <p>$20,000 or $50,000 City Cash to start. Choose from performance cars, SUVs and four-wheel utility vehicles.</p>
       <p>Drive: W/A/S/D. Shift = NITRO. Ctrl = SPRINT while on foot. On mobile, hold SPRINT to run.</p>
       <p>Walk with WASD. Shift run. Space jump. E enter/exit. F lights. H horn. M map. G garage. P or Esc pause.</p>
       <p>Complete jobs (gold markers) and races (green checkpoints) to earn money and XP. During races, follow the marked route and chase the rival vehicles.</p>
