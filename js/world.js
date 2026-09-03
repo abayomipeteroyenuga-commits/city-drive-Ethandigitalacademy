@@ -319,21 +319,21 @@ export class World {
 
   _landmarks() {
     // Nova Tower
-    this._block(20, 10, 16, 90, 16, 0x4a6a88);
-    this._block(20, 10, 8, 108, 8, 0x88ccee);
+    this._block(24, 24, 16, 90, 16, 0x4a6a88);
+    this._block(24, 24, 8, 108, 8, 0x88ccee);
     // Mall
-    this._block(-40, 30, 36, 12, 28, 0x886666);
+    this._block(-40, 40, 36, 12, 28, 0x886666);
     // Stadium
     const stad = new THREE.Mesh(
       new THREE.CylinderGeometry(22, 26, 10, 24, 1, true),
       new THREE.MeshStandardMaterial({ color: 0x445566, side: THREE.DoubleSide })
     );
-    stad.position.set(120, 5, -40);
+    stad.position.set(120, 5, -48);
     this.scene.add(stad);
     // City Hall
-    this._block(-20, -30, 22, 16, 18, 0x887766);
+    this._block(-20, -40, 22, 16, 18, 0x887766);
     // Airport terminal
-    this._block(-280, -80, 50, 10, 18, 0x8899aa);
+    this._block(-280, -110, 50, 10, 18, 0x8899aa);
     const runway = new THREE.Mesh(
       new THREE.BoxGeometry(18, 0.1, 160),
       new THREE.MeshStandardMaterial({ color: 0x44444a })
@@ -343,13 +343,13 @@ export class World {
     // Hotel
     this._block(10, 240, 18, 32, 14, 0xaa8866);
     // Police
-    this._block(60, 50, 16, 14, 16, 0x2244aa);
+    this._block(60, 60, 16, 14, 16, 0x2244aa);
     // Garage
-    this._block(40, -70, 24, 8, 16, 0x556677);
+    this._block(40, -64, 24, 8, 16, 0x556677);
     // Repair
-    this._block(30, -90, 16, 7, 12, 0x667744);
+    this._block(30, -104, 16, 7, 12, 0x667744);
     // Race arena
-    this._block(-120, -155, 8, 6, 8, 0x884444);
+    this._block(-120, -170, 8, 6, 8, 0x884444);
   }
 
 

@@ -750,12 +750,17 @@ export class Game {
   }
 
   _buildRoute(start, dest) {
-    const snap = (v) => Math.round(v / 80) * 80;
-    const sx = snap(start.x), sz = snap(start.z), dx = snap(dest.x), dz = snap(dest.z);
-    const a = [{ x: start.x, z: start.z }, { x: sx, z: sz }, { x: dx, z: sz }, { x: dx, z: dz }, { x: dest.x, z: dest.z }];
-    const b = [{ x: start.x, z: start.z }, { x: sx, z: sz }, { x: sx, z: dz }, { x: dx, z: dz }, { x: dest.x, z: dest.z }];
-    const score = r => r.reduce((n, p, i) => i ? n + Math.hypot(p.x-r[i-1].x, p.z-r[i-1].z) : 0, 0);
-    return (score(a) <= score(b) ? a : b).filter((p,i,r) => i === 0 || Math.hypot(p.x-r[i-1].x,p.z-r[i-1].z) > 1);
+    // ROAD-SAFE GPS: never use diagonal shortcuts through city blocks.
+    // Main roads are centered on the 80-unit grid.
+    const road = (v) => Math.round(Number(v) / 80) * 80;
+    const s = { x: Number(start.x), z: Number(start.z) };
+    const d = { x: Number(dest.x), z: Number(dest.z) };
+    const sx = road(s.x), sz = road(s.z), dx = road(d.x), dz = road(d.z);
+    const clean = (r) => r.filter((p,i,a) => i === 0 || Math.hypot(p.x-a[i-1].x,p.z-a[i-1].z) > 1);
+    const a = clean([s,{x:sx,z:s.z},{x:sx,z:sz},{x:dx,z:sz},{x:dx,z:dz},d]);
+    const b = clean([s,{x:s.x,z:sz},{x:sx,z:sz},{x:sx,z:dz},{x:dx,z:dz},d]);
+    const score = r => r.reduce((n,p,i) => i ? n + Math.abs(p.x-r[i-1].x) + Math.abs(p.z-r[i-1].z) : 0, 0);
+    return score(a) <= score(b) ? a : b;
   }
 
   _setRoute(start, dest, color=0x00d4ff) {
