@@ -43,7 +43,8 @@ export function createVehicleMesh(def){
   else if(def.id==='street_hatch'||def.id==='street_family_hatch'||def.id==='city_hatch'||def.id==='family_hatch') buildHatch(g,def,c,s);
   else if(def.id==='street_mpv'||def.id==='family_mpv') buildMpv(g,def,c,s);
   else if(def.id==='street_taxi'||def.id==='city_taxi') buildTaxi(g,def,c,s);
-  else if(def.id==='street_metro'||def.id==='street_exec'||def.id==='metro_s'||def.id==='metro_sedan'||def.id==='urban_lx'||def.id==='executive_sedan') buildSedan(g,def,c,s);
+  else if(def.id==='metro_s' && def.type==='suv') buildSuv(g,def,c,s);
+  else if(def.id==='street_metro'||def.id==='street_exec'||def.id==='metro_sedan'||def.id==='urban_lx'||def.id==='executive_sedan') buildSedan(g,def,c,s);
   else if(def.id==='street_compact_suv'||def.id==='street_urban_suv'||def.id==='street_lux_suv'||def.id==='compact_suv'||def.id==='urban_suv'||def.id==='luxury_suv') buildSuv(g,def,c,s);
   else if(def.type==='suv') buildSuv(g,def,c,s);
   else if(def.id==='vortex_x'||def.id==='falcon_sport') buildSport(g,def,c,s);
@@ -94,11 +95,11 @@ function buildMuscle(g,def,c,s){
   windows(g,w,l,.98); lights(g,w,l); mirrors(g,w,.05); wheels4(g,w,l,.37,.37); aero(g,w,l,c,s,true);
 }
 function buildSuv(g,def,c,s){
-  const w=2.1,l=4.55,h=def.id==='mountain_beast'?1.16:1.02,r=def.id==='mountain_beast'?.43:.38;
+  const w=def.id==='metro_s'?2.18:2.1,l=def.id==='metro_s'?4.65:4.55,h=def.id==='mountain_beast'?1.16:(def.id==='metro_s'?1.22:1.02),r=def.id==='mountain_beast'?.43:(def.id==='metro_s'?.40:.38);
   g.add(box(w,.58,l,c,0,.68,0,.38,.42));
   g.add(mesh(new THREE.SphereGeometry(1,18,10),mat(s,.34,.42),0,1.13,-.12)).scale.set(w*.60,h*.48,l*.37);
   windows(g,w,l,1.18); lights(g,w,l); mirrors(g,w,.05); wheels4(g,w,l,r,def.id==='mountain_beast'?.45:.40); aero(g,w,l,c,s,false);
-  if(def.id==='mountain_beast'){ g.add(box(.08,.65,.08,0x2b2d32,w*.56,1.05,0,.3,.75)); g.add(box(.08,.65,.08,0x2b2d32,-w*.56,1.05,0,.3,.75)); }
+  if(def.id==='mountain_beast' || def.id==='metro_s'){ g.add(box(.08,.70,.08,0x2b2d32,w*.56,1.10,0,.3,.75)); g.add(box(.08,.70,.08,0x2b2d32,-w*.56,1.10,0,.3,.75)); if(def.id==='metro_s') g.add(box(w*.70,.08,.08,s,0,1.42,-l*.43,.2,.7)); }
 }
 function buildPickup(g,def,c,s){
   const w=2.02,l=4.7;

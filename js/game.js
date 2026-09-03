@@ -74,7 +74,7 @@ export class Game {
   }
 
   _freshState() {
-    const starter = cloneVehicle(getVehicleById('city_explorer'), { currentFuel: 70, currentMileage: 12, isOwned: true });
+    const starter = cloneVehicle(getVehicleById('metro_s'), { currentFuel: 70, currentMileage: 12, isOwned: true });
     return {
       player: {
         name: 'Driver',

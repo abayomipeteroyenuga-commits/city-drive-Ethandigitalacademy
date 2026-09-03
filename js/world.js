@@ -94,11 +94,68 @@ export class World {
     this._mountains();
     this._poiMarkers();
     this._streetFurniture();
+    this._scenicEnvironment();
     this._trafficSignals();
     this._sky();
     return this;
   }
 
+
+  _scenicEnvironment() {
+    // FASCINATING CITY SCENERY: parks, palms, lamps, banners and roadside scenery.
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6b4630, roughness: 0.9 });
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x23834a, roughness: 0.8 });
+    const lampMat = new THREE.MeshStandardMaterial({ color: 0x20252b, metalness: 0.7, roughness: 0.28 });
+    const glowMat = new THREE.MeshStandardMaterial({ color: 0xffd77a, emissive: 0xffb52e, emissiveIntensity: 1.7 });
+    const bannerMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, emissive: 0x0b2c66, emissiveIntensity: 0.25 });
+    const addPalm = (x,z,scale=1) => {
+      const g=new THREE.Group(); g.position.set(x,0,z); g.scale.setScalar(scale);
+      const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.22,.34,3.2,8),trunkMat); trunk.position.y=1.6; g.add(trunk);
+      for(let i=0;i<7;i++){ const leaf=new THREE.Mesh(new THREE.BoxGeometry(.14,.08,2.0),leafMat); leaf.position.y=3.25; leaf.rotation.y=i*Math.PI*2/7; leaf.rotation.x=-0.35; leaf.position.x=Math.sin(i*Math.PI*2/7)*.55; leaf.position.z=Math.cos(i*Math.PI*2/7)*.55; g.add(leaf); }
+      this.scene.add(g);
+    };
+    const addLamp=(x,z)=>{ const g=new THREE.Group(); g.position.set(x,0,z); const pole=new THREE.Mesh(new THREE.CylinderGeometry(.07,.1,4.2,8),lampMat); pole.position.y=2.1; g.add(pole); const bulb=new THREE.Mesh(new THREE.SphereGeometry(.13,8,8),glowMat); bulb.position.y=4.2; g.add(bulb); this.scene.add(g); };
+    const addBanner=(x,z,rot=0)=>{ const g=new THREE.Group(); g.position.set(x,0,z); g.rotation.y=rot; const p1=new THREE.Mesh(new THREE.CylinderGeometry(.05,.06,3.1,6),lampMat); const p2=p1.clone(); p1.position.set(-2,1.55,0); p2.position.set(2,1.55,0); const b=new THREE.Mesh(new THREE.BoxGeometry(4,.75,.06),bannerMat); b.position.y=2.65; g.add(p1,p2,b); this.scene.add(g); };
+    // Waterfront palms and resort boulevard.
+    [[-80,245],[0,245],[80,245],[-120,265],[120,265]].forEach(v=>addPalm(v[0],v[1],1.05));
+    // Green spaces around major open-road areas.
+    [[-150,30],[-150,110],[150,110],[200,80],[250,120],[-250,210],[-210,250]].forEach(v=>addPalm(v[0],v[1],.9));
+    for(let x=-320;x<=320;x+=80){ addLamp(x, -8); addLamp(x, 88); }
+    for(let z=-320;z<=320;z+=80){ addLamp(-8,z); addLamp(88,z); }
+    addBanner(-8,-55,Math.PI/2); addBanner(88,155,Math.PI/2); addBanner(-155,8,0); addBanner(165,8,0);
+    // Signature CITY DRIVE scenery: lightweight, non-colliding visual attractions.
+    const signMat=new THREE.MeshStandardMaterial({color:0x101827,metalness:.65,roughness:.3,emissive:0x07152b,emissiveIntensity:.35});
+    const signGlow=new THREE.MeshStandardMaterial({color:0x00d4ff,emissive:0x00a8ff,emissiveIntensity:1.4,roughness:.35});
+    const addDigitalSign=(x,z,rot=0,textWidth=7)=>{
+      const g=new THREE.Group(); g.position.set(x,.2,z); g.rotation.y=rot;
+      const post=new THREE.Mesh(new THREE.CylinderGeometry(.09,.12,3.8,8),signMat); post.position.y=1.9;
+      const panel=new THREE.Mesh(new THREE.BoxGeometry(textWidth,1.35,.12),signMat); panel.position.y=3.55;
+      const edge=new THREE.Mesh(new THREE.BoxGeometry(textWidth-.3,1.05,.035),signGlow); edge.position.set(0,3.55,.075);
+      g.add(post,panel,edge); this.scene.add(g);
+    };
+    [[-120,48,0],[120,48,Math.PI],[200,-8,Math.PI/2],[-200,-8,-Math.PI/2],[160,208,Math.PI]].forEach(v=>addDigitalSign(...v));
+    // Scenic arches at the beachfront and race approach. They sit beside lanes, never in them.
+    const archMat=new THREE.MeshStandardMaterial({color:0x18283b,metalness:.75,roughness:.25,emissive:0x061a2c,emissiveIntensity:.25});
+    const neonMat=new THREE.MeshStandardMaterial({color:0xff5bd6,emissive:0xff27c7,emissiveIntensity:1.5});
+    const addArch=(x,z,rot=0)=>{ const g=new THREE.Group(); g.position.set(x,0,z); g.rotation.y=rot;
+      const a=new THREE.Mesh(new THREE.BoxGeometry(.45,6,.45),archMat), b=a.clone(), top=new THREE.Mesh(new THREE.BoxGeometry(12,.45,.45),neonMat);
+      a.position.set(-6,3,0); b.position.set(6,3,0); top.position.set(0,6,0); g.add(a,b,top); this.scene.add(g); };
+    addArch(0,232,Math.PI/2); addArch(-120,-120,0);
+    // Decorative fountain/park pads: animated water rings, deliberately offset from roads.
+    const waterMat=new THREE.MeshStandardMaterial({color:0x43c7e8,transparent:true,opacity:.72,metalness:.2,roughness:.18,emissive:0x083b4b,emissiveIntensity:.25});
+    [[-150,125],[205,105]].forEach(([x,z])=>{
+      const basin=new THREE.Mesh(new THREE.CylinderGeometry(5.2,5.2,.18,32),signMat); basin.position.set(x,.09,z); this.scene.add(basin);
+      const water=new THREE.Mesh(new THREE.CylinderGeometry(4.7,4.7,.035,32),waterMat); water.position.set(x,.2,z); water.userData.scenicWater=true; this.scene.add(water);
+    });
+    // Small roadside planters make the city feel lived-in without blocking traffic lanes.
+    const planterMat=new THREE.MeshStandardMaterial({color:0x343a40,roughness:.9});
+    for(let i=0;i<26;i++){
+      const x=((i*97)%560)-280, z=((i*149)%520)-260;
+      if(Math.abs(x%80)<12 || Math.abs(z%80)<12) continue;
+      const pot=new THREE.Mesh(new THREE.CylinderGeometry(.5,.65,.55,10),planterMat); pot.position.set(x,.28,z); this.scene.add(pot);
+      const shrub=new THREE.Mesh(new THREE.SphereGeometry(.48,8,7),leafMat); shrub.position.set(x,.78,z); this.scene.add(shrub);
+    }
+  }
 
   _trafficSignals() {
     // American-style signalized intersections in the central city.

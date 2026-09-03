@@ -26,18 +26,24 @@ function css(){
    padding:22px;box-shadow:0 18px 50px rgba(0,0,0,.38);backdrop-filter:blur(14px)}
  #cityWowMenu .wow-card h2{margin:0 0 6px;font-size:23px}
  #cityWowMenu .wow-card p{color:#9eacc0;font-size:13px;margin:0 0 16px}
- #cityWowMenu .car-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;max-height:360px;overflow:auto;padding-right:3px}
- #cityWowMenu .car-btn{min-height:78px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:#111b2d;color:#fff;
-   cursor:pointer;padding:10px;text-align:left;transition:.16s transform,.16s border,.16s background}
+ #cityWowMenu .car-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;max-height:390px;overflow:auto;padding-right:3px}
+ #cityWowMenu .car-btn{min-height:88px;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:linear-gradient(145deg,#111b2d,#0b1220);color:#fff;
+   cursor:pointer;padding:13px;text-align:left;transition:.16s transform,.16s border,.16s background;position:relative;overflow:hidden}
  #cityWowMenu .car-btn:hover{transform:translateY(-2px);background:#182641;border-color:rgba(110,169,255,.7)}
  #cityWowMenu .car-btn.selected{border-color:#67a5ff;background:#16305a;box-shadow:0 0 0 2px rgba(103,165,255,.16)}
- #cityWowMenu .car-icon{height:28px;margin-bottom:5px;position:relative}
- #cityWowMenu .car-icon:before{content:"";position:absolute;left:8px;top:9px;width:62px;height:13px;border-radius:7px 13px 5px 5px;background:var(--car,#d8d8d8)}
- #cityWowMenu .car-icon:after{content:"";position:absolute;left:21px;top:3px;width:34px;height:11px;border-radius:13px 13px 3px 3px;background:#1a2b3a}
- #cityWowMenu .car-name{font-size:12px;font-weight:800}
- #cityWowMenu .car-class{font-size:10px;color:#8291a7;text-transform:uppercase;letter-spacing:.08em}
+ #cityWowMenu .car-icon{display:none!important}
+ #cityWowMenu .car-name{font-size:14px;font-weight:950;letter-spacing:.01em}
+ #cityWowMenu .car-class{font-size:10px;color:#8291a7;text-transform:uppercase;letter-spacing:.08em;margin-top:5px}
  #cityWowMenu .selected-panel{margin-top:12px;display:flex;justify-content:space-between;gap:12px;align-items:center;
    border-top:1px solid rgba(255,255,255,.08);padding-top:13px}
+ #cityWowMenu .selected-showcase{position:relative;height:185px;margin:12px 0 0;border-radius:16px;overflow:hidden;background:radial-gradient(circle at 65% 40%,rgba(0,212,255,.12),transparent 38%),linear-gradient(145deg,#0a1220,#050912);border:1px solid rgba(255,255,255,.08)}
+ #cityWowMenu .showcase-car{position:absolute;left:8%;right:6%;bottom:23%;height:42%;background:linear-gradient(150deg,#f2f5f8,#708092 25%,#1a2b3b 60%,#060b12);border-radius:28% 42% 15% 12%;box-shadow:inset 0 3px 7px rgba(255,255,255,.65),inset 0 -18px 25px rgba(0,0,0,.75),0 25px 35px rgba(0,0,0,.55);transform:skewX(-4deg)}
+ #cityWowMenu .showcase-car:before{content:"";position:absolute;left:27%;top:-48%;width:42%;height:62%;background:linear-gradient(145deg,#bdcad6,#1c3042);clip-path:polygon(20% 100%,32% 15%,73% 0,100% 100%);border-radius:18px}
+ #cityWowMenu .showcase-car:after{content:"";position:absolute;left:35%;top:-34%;width:31%;height:28%;background:linear-gradient(145deg,#07121d,#315067);clip-path:polygon(12% 100%,28% 10%,100% 0,100% 100%);border:1px solid rgba(180,230,255,.35)}
+ #cityWowMenu .showcase-wheel{position:absolute;bottom:-20%;width:17%;aspect-ratio:1;border-radius:50%;background:#030507;border:9px solid #151d27;box-shadow:inset 0 0 0 5px #667381}
+ #cityWowMenu .showcase-wheel.a{left:14%}.showcase-wheel.b{right:14%}
+ #cityWowMenu .showcase-label{position:absolute;top:14px;left:16px;font-size:9px;letter-spacing:.2em;color:#7890aa;font-weight:900}
+ #cityWowMenu .showcase-name{position:absolute;right:16px;top:13px;text-align:right;font-size:11px;font-weight:900}
  #cityWowMenu .selected-name{font-size:18px;font-weight:900}
  #cityWowMenu .selected-meta{font-size:11px;color:#94a4ba}
  #cityWowMenu .wow-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px}
@@ -122,6 +128,7 @@ function openVehicleSelection(){
          <button class="wow-tab" data-filter="commercial">COMMERCIAL</button>
        </div>
        <div class="car-grid" id="wowCarGrid"></div>
+       <div class="selected-showcase"><div class="showcase-label">SELECTED VEHICLE</div><div class="showcase-name" id="wowShowcaseName">G-WAGON</div><div class="showcase-car"><div class="showcase-wheel a"></div><div class="showcase-wheel b"></div></div></div>
        <div class="selected-panel">
          <div><div class="selected-name" id="wowSelectedName">Choose a car</div><div class="selected-meta" id="wowSelectedMeta">Level 1 is locked until you choose.</div></div>
          <div>🚗</div>
@@ -160,12 +167,13 @@ function openVehicleSelection(){
  cars.forEach(function(car){
    car._wowType=carType(car);
    var b=document.createElement("button"); b.className="car-btn"; b.dataset.type=car._wowType;
-   b.innerHTML='<div class="car-icon" style="--car:'+(car.color||"#d8d8d8")+'"></div><div class="car-name">'+(car.name||car.id)+'</div><div class="car-class">'+(car.class||car.type||"street")+'</div><span class="car-type-chip">'+car._wowType.toUpperCase()+'</span>';
+   b.innerHTML='<div class="car-name">'+(car.name||car.id)+'</div><div class="car-class">'+(car.manufacturer||"CITY DRIVE")+' • '+(car.class||car.type||"street")+'</div><span class="car-type-chip">'+car._wowType.toUpperCase()+'</span>';
    b.onclick=function(){
      state.selected=car.id;
      grid.querySelectorAll(".car-btn").forEach(function(x){x.classList.remove("selected");});
      b.classList.add("selected");
      el.querySelector("#wowSelectedName").textContent=car.name||car.id;
+     el.querySelector("#wowShowcaseName").textContent=(car.name||car.id).toUpperCase();
      el.querySelector("#wowSelectedMeta").textContent=(car.class||"street").toUpperCase()+"  •  "+(car.topSpeed?Math.round(car.topSpeed*3.6)+" km/h":"READY");
      el.querySelector("#wowStart").disabled=false;
      el.querySelector(".level-card span").textContent="✓ Ready to start";
@@ -184,6 +192,9 @@ function openVehicleSelection(){
  }
  el.querySelectorAll(".wow-tab").forEach(function(t){t.onclick=function(){applyFilter(t.dataset.filter);};});
  applyFilter("all");
+ // G-Wagon is the authoritative starter. Preselect it on a fresh start so the user can begin immediately.
+ var starter=cars.find(function(c){ return c.id==='metro_s' || String(c.name||'').toLowerCase().includes('g-wagon'); });
+ if(starter){ var sb=[...grid.querySelectorAll('.car-btn')].find(function(b){ return b.querySelector('.car-name')?.textContent===starter.name; }); if(sb) sb.click(); }
  el.querySelector("#wowStart").onclick=function(){
    if(!state.selected) return;
    try{localStorage.setItem("cityDriveSelectedVehicle",state.selected);}catch(e){}

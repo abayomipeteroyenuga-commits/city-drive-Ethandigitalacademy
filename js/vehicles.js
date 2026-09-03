@@ -27,11 +27,11 @@ export const VEHICLES = [
   // 1. STARTER
   {
     id: 'metro_s',
-    name: 'Metro',
-    manufacturer: 'Aether',
-    type: VEHICLE_TYPES.CAR,
+    name: 'G-Wagon',
+    manufacturer: 'Mercedes-Benz',
+    type: VEHICLE_TYPES.SUV,
     tier: VEHICLE_TIERS.STARTER,
-    price: 8500,
+    price: 0,
     topSpeed: 145,          // km/h
     acceleration: 6.8,      // 0-100 time (lower = better)
     handling: 62,
@@ -48,15 +48,15 @@ export const VEHICLES = [
     requiredLevel: 1,
     color: 0x4488cc,
     secondaryColor: 0x222233,
-    description: 'Affordable compact sedan. Balanced and easy to drive.',
+    description: 'Iconic luxury 4x4 SUV. The starting vehicle for every CITY DRIVE driver.',
     seats: 4,
     isMotorcycle: false
   },
   // 2. BEGINNER
   {
     id: 'urban_lx',
-    name: 'Urban LX',
-    manufacturer: 'Aether',
+    name: 'S-Class',
+    manufacturer: 'Mercedes-Benz',
     type: VEHICLE_TYPES.CAR,
     tier: VEHICLE_TIERS.BEGINNER,
     price: 18500,
@@ -76,15 +76,15 @@ export const VEHICLES = [
     requiredLevel: 2,
     color: 0x55aa77,
     secondaryColor: 0x1a2a22,
-    description: 'Comfortable family sedan with better speed and handling.',
+    description: 'Premium executive sedan with smooth power and refined handling.',
     seats: 5,
     isMotorcycle: false
   },
   // 3. ADVANCED
   {
     id: 'falcon_sport',
-    name: 'Falcon Sport',
-    manufacturer: 'Vespera',
+    name: '296 GTB',
+    manufacturer: 'Ferrari',
     type: VEHICLE_TYPES.CAR,
     tier: VEHICLE_TIERS.ADVANCED,
     price: 48500,
@@ -104,15 +104,15 @@ export const VEHICLES = [
     requiredLevel: 5,
     color: 0xcc3344,
     secondaryColor: 0x220011,
-    description: 'Sports coupe. High acceleration and sharp handling.',
+    description: 'Exotic Italian supercar with razor-sharp acceleration and handling.',
     seats: 2,
     isMotorcycle: false
   },
   // 4. PREMIUM
   {
     id: 'titan_muscle',
-    name: 'Titan Muscle',
-    manufacturer: 'Ironclad',
+    name: 'Mustang GT',
+    manufacturer: 'Ford',
     type: VEHICLE_TYPES.CAR,
     tier: VEHICLE_TIERS.PREMIUM,
     price: 62000,
@@ -139,9 +139,9 @@ export const VEHICLES = [
   // 5. PREMIUM
   {
     id: 'royal_executive',
-    name: 'Royal Executive',
-    manufacturer: 'Lumina',
-    type: VEHICLE_TYPES.CAR,
+    name: 'Bentayga',
+    manufacturer: 'Bentley',
+    type: VEHICLE_TYPES.SUV,
     tier: VEHICLE_TIERS.PREMIUM,
     price: 89000,
     topSpeed: 210,
@@ -160,15 +160,15 @@ export const VEHICLES = [
     requiredLevel: 7,
     color: 0x111111,
     secondaryColor: 0x333344,
-    description: 'Luxury sedan. Expensive, comfortable and refined.',
+    description: 'Ultra-luxury SUV with a refined cabin and commanding road presence.',
     seats: 5,
     isMotorcycle: false
   },
   // 6. ELITE
   {
     id: 'vortex_x',
-    name: 'Vortex X',
-    manufacturer: 'Vespera',
+    name: 'SF90 Stradale',
+    manufacturer: 'Ferrari',
     type: VEHICLE_TYPES.CAR,
     tier: VEHICLE_TIERS.ELITE,
     price: 185000,
@@ -195,8 +195,8 @@ export const VEHICLES = [
   // 7. INTERMEDIATE SUV
   {
     id: 'city_explorer',
-    name: 'City Explorer',
-    manufacturer: 'Trailforge',
+    name: 'Defender',
+    manufacturer: 'Land Rover',
     type: VEHICLE_TYPES.SUV,
     tier: VEHICLE_TIERS.INTERMEDIATE,
     price: 27500,
@@ -223,8 +223,8 @@ export const VEHICLES = [
   // 8. ADVANCED SUV
   {
     id: 'grand_terrain',
-    name: 'Grand Terrain',
-    manufacturer: 'Lumina',
+    name: 'Range Rover',
+    manufacturer: 'Range Rover',
     type: VEHICLE_TYPES.SUV,
     tier: VEHICLE_TIERS.ADVANCED,
     price: 72000,
@@ -251,8 +251,8 @@ export const VEHICLES = [
   // 9. ADVANCED OFF-ROAD
   {
     id: 'mountain_beast',
-    name: 'Mountain Beast',
-    manufacturer: 'Trailforge',
+    name: 'Wrangler Rubicon',
+    manufacturer: 'Jeep',
     type: VEHICLE_TYPES.SUV,
     tier: VEHICLE_TIERS.ADVANCED,
     price: 58000,

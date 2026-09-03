@@ -138,17 +138,29 @@ export class AudioSystem {
 
   _startMusic() {
     if (!this.ctx || this.ctx.state !== 'running' || !this.musicOn || this.musicTimer) return;
-    // Original synth driving groove. No copyrighted audio and no network request.
-    const notes = [220, 261.63, 329.63, 293.66, 246.94, 293.66, 349.23, 329.63, 392.00, 349.23, 293.66, 261.63];
+    // Original continuous COUNTRY ROAD soundtrack: warm acoustic-style plucks,
+    // walking bass and a gentle country backbeat. No external/copyrighted track.
+    const chords = [
+      [196.00,246.94,293.66],   // G
+      [164.81,196.00,246.94],   // Em
+      [174.61,220.00,261.63],   // C/F color
+      [146.83,185.00,220.00]    // Dm/D color
+    ];
+    const melody = [392,440,493.88,587.33,493.88,440,392,329.63,293.66,329.63,392,440,493.88,440,392,329.63];
+    const bass = [98,98,123.47,123.47,82.41,82.41,98,98];
     this.musicStep = 0;
     const tick = () => {
       this.musicTimer = null;
       if (!this.ctx || this.ctx.state !== 'running' || !this.musicOn) return;
-      const f = notes[this.musicStep++ % notes.length];
-      this._musicNote(f, 0.20, 0.055);
-      if (this.musicStep % 2 === 0) this._musicNote(f * 2, 0.09, 0.018);
-      if (this.musicStep % 4 === 0) this._musicNote(f / 2, 0.35, 0.025);
-      this.musicTimer = window.setTimeout(tick, 430);
+      const step=this.musicStep++;
+      const chord=chords[Math.floor(step/4)%chords.length];
+      chord.forEach((f,i)=>this._musicNote(f,0.30,0.014+i*0.003,'triangle'));
+      this._musicNote(melody[step%melody.length],0.22,0.028,'triangle');
+      this._musicNote(bass[step%bass.length],0.30,0.025,'sine');
+      // Soft country-style kick/snare pulse without harsh volume.
+      if(step%4===0 || step%4===2) this._musicNote(72,0.055,0.012,'sine');
+      if(step%4===1 || step%4===3) this._musicNote(180,0.035,0.006,'square');
+      this.musicTimer=window.setTimeout(tick,360);
     };
     tick();
   }
@@ -160,13 +172,13 @@ export class AudioSystem {
     }
   }
 
-  _musicNote(freq, dur, vol) {
+  _musicNote(freq, dur, vol, type = 'triangle') {
     if (!this.ctx || !this.musicGain || !this.musicOn || this.ctx.state !== 'running') return;
     const now = this.ctx.currentTime;
     const o = this.ctx.createOscillator();
     const g = this.ctx.createGain();
     const filter = this.ctx.createBiquadFilter();
-    o.type = 'triangle';
+    o.type = type;
     o.frequency.setValueAtTime(freq, now);
     filter.type = 'lowpass';
     filter.frequency.value = 1100;
