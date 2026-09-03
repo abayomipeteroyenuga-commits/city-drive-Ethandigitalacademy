@@ -952,7 +952,15 @@ export class Game {
       return;
     }
     if (!Array.isArray(this.state.player.campaignCompleted)) this.state.player.campaignCompleted = [];
-    this.state.player.campaignCompleted.push(m.level);
+    if (!this.state.player.campaignCompleted.includes(m.level)) this.state.player.campaignCompleted.push(m.level);
+    // Campaign progression is sequential and authoritative: completing Level N
+    // immediately unlocks Level N+1, independent of the player's XP/rank level.
+    const unlocked = this.state.player.campaignCompleted.reduce((max, n) => {
+      const level = Number(n);
+      return Number.isInteger(level) && level === max + 1 ? level + 1 : max;
+    }, 1);
+    const nextUnlocked = Math.min(CAMPAIGN_MISSIONS.length, Math.max(1, unlocked));
+    this.state.player.campaignLevel = Math.max(this.state.player.campaignLevel || 1, nextUnlocked);
     this.state.player.missionsCompleted++;
     this._earn(m.reward);
     this.state.player.xp += m.xp;
@@ -965,10 +973,13 @@ export class Game {
     this.audio.success();
     if (next) {
       this.state.player.campaignLevel = next.level;
-      this.ui.toast(`LEVEL ${m.level} COMPLETE! +${this.economy.format(m.reward)} +${m.xp} XP`);
+      this.ui.toast(`LEVEL ${m.level} COMPLETE! LEVEL ${next.level} UNLOCKED! +${this.economy.format(m.reward)} +${m.xp} XP`);
+      this.persist();
       setTimeout(() => {
-        if (!this.activeMission && this.mode === 'driving' && this.controller) this.startCampaignMission();
-      }, 900);
+        if (!this.activeMission && this.mode === 'driving' && this.controller) {
+          this.startCampaignMission();
+        }
+      }, 1200);
     } else {
       this.state.player.campaignLevel = m.level;
       this.ui.toast(`CAMPAIGN COMPLETE! +${this.economy.format(m.reward)} +${m.xp} XP`);

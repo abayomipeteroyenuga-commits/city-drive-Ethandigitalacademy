@@ -1,5 +1,9 @@
 import { UI } from './ui.js';
 import { Game, hasSave } from './game.js';
+import { VEHICLES } from './vehicles.js';
+
+// Expose the authoritative 15-vehicle catalog to the non-module WOW menu.
+window.VEHICLES = VEHICLES;
 
 const ui = new UI();
 let game = null;
@@ -78,6 +82,25 @@ function wireMenu() {
     g.continueGame();
     g.enterWorld(true, { startGrid: true });
   };
+
+  // Every feature card on the landing page is a real working control.
+  document.querySelectorAll('#main-menu [data-landing-action]').forEach((card) => {
+    card.onclick = () => {
+      const action = card.dataset.landingAction;
+      const g = ensureGame();
+      if (action === 'campaign') { ui.openJobs(g); return; }
+      if (action === 'garage') { ui.openGarage(g); return; }
+      if (action === 'races') { ui.openJobs(g); return; }
+      if (action === 'drive') {
+        if (window.CityDriveWowMenu) {
+          document.getElementById('main-menu')?.classList.add('hidden');
+          window.CityDriveWowMenu.open();
+        } else {
+          g.enterWorld(true, { startGrid: true });
+        }
+      }
+    };
+  });
 }
 
 function wirePause(g) {

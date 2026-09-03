@@ -125,7 +125,7 @@ export class NPCSystem {
       mesh.add(driver);
       mesh.position.set(60 + i * 20, 0, 40 + i * 30);
       this.scene.add(mesh);
-      this.police.push({ mesh, driver, radius: 2.45, speed: 16, chase: false, search: 0, anim: i });
+      this.police.push({ mesh, driver, radius: 2.45, speed: 16, currentSpeed: 16, chase: false, search: 0, anim: i });
     }
   }
 
@@ -254,6 +254,21 @@ export class NPCSystem {
         cop.anim += dt * 0.8;
         animateHuman(cop.driver, cop.anim, true);
       }
+    }
+
+    // Final hard collision pass: police are vehicles too. This prevents
+    // civilian traffic, police cars and the player's car from interpenetrating.
+    for (let i = 0; i < this.police.length; i++) {
+      const a = this.police[i];
+      if (!a?.mesh?.visible) continue;
+      for (let j = i + 1; j < this.police.length; j++) {
+        const b = this.police[j];
+        if (b?.mesh?.visible) this._resolveCarPair(a, b);
+      }
+      for (const t of this.traffic) {
+        if (t?.mesh?.visible) this._resolveCarPair(a, t);
+      }
+      this._resolvePlayerCollision(a, playerMesh, playerController);
     }
     return Math.round(this.wanted);
   }

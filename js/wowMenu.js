@@ -79,6 +79,7 @@ function getCars(){
  var c=window.CityDriveRealStreetCars&&window.CityDriveRealStreetCars.catalog;
  if(c) return Object.entries(c).map(function(x){return {id:x[0],...x[1]};});
  var v=window.VEHICLES;
+ if(Array.isArray(v)) return v.map(function(x){return {...x};});
  if(v&&typeof v==="object") return Object.entries(v).map(function(x){return {id:x[0],...x[1]};});
  return [];
 }
@@ -87,6 +88,10 @@ function open(){
  css();
  var old=document.getElementById("cityWowMenu"); if(old) old.remove();
  var cars=getCars();
+ var existingGame=window.game||window.firstGame||window.cityDriveGame;
+ var campaignLevel=Math.max(1,Math.min(20,Number(existingGame?.state?.player?.campaignLevel)||1));
+ // Always use the authoritative vehicle database and keep the required catalog at 15.
+ if(cars.length>15) cars=cars.slice(0,15);
  var el=document.createElement("div"); el.id="cityWowMenu";
  el.innerHTML=`<div class="wow-shell">
    <div class="wow-hero">
@@ -114,7 +119,7 @@ function open(){
        </div>
        <div class="wow-actions">
          <button class="action secondary" id="wowBack">Back</button>
-         <button class="action continue" id="wowStart" disabled>START LEVEL 1</button>
+         <button class="action continue" id="wowStart" disabled>START LEVEL ${campaignLevel}</button>
        </div>
      </section>
      <section class="wow-card">
@@ -126,7 +131,7 @@ function open(){
          <div class="feature"><strong>🏁 Level 1</strong><span>Your first driving challenge begins after selection.</span></div>
          <div class="feature"><strong>🎮 Full Control</strong><span>Keyboard and game controls ready.</span></div>
        </div>
-       <div class="level-card"><div><div class="level-badge">MISSION 01</div><strong>THE CITY AWAKENS</strong></div><span>🔒 Choose a car first</span></div>
+       <div class="level-card"><div><div class="level-badge">MISSION ${String(campaignLevel).padStart(2,'0')}</div><strong>THE CITY AWAKENS</strong></div><span>🔒 Choose a car first</span></div>
      </section>
    </div>
  </div>`;
@@ -139,6 +144,9 @@ function open(){
    if(t.includes('commercial') || /bus|van|cargo|truck/.test(String(car.name||'').toLowerCase())) return 'commercial';
    if(t.includes('suv')) return 'suv';
    return 'car';
+ }
+ if(!cars.length){
+   grid.innerHTML='<div style="grid-column:1/-1;padding:24px;text-align:center;color:#ff8d8d;border:1px solid rgba(255,100,100,.25);border-radius:12px">VEHICLES ARE STILL LOADING — PLEASE WAIT A MOMENT.</div>';
  }
  cars.forEach(function(car){
    car._wowType=carType(car);
@@ -192,7 +200,10 @@ function open(){
      // Use the game's authoritative vehicle-selection API. This correctly
      // activates an already-owned car OR purchases/activates a new selection.
      if(typeof g.driveSelectedVehicle==='function'){
-       if(!g.driveSelectedVehicle({id:state.selected})) return;
+       if(!g.driveSelectedVehicle({id:state.selected})) {
+         if(g.ui && typeof g.ui.toast==='function') g.ui.toast('This vehicle is not available yet. Complete the required level or check your cash.');
+         return;
+       }
      } else {
        var v=g.state?.garage?.vehicles?.find(function(x){return x.id===state.selected;});
        if(v){ g.state.activeVehicleUid=v.vehicleUid; g.state.activeVehicleId=v.id; if(typeof g.persist==='function') g.persist(); }

@@ -556,18 +556,29 @@ export class UI {
         ${active ? '<span class="mission-status">CURRENT MISSION</span>' : done ? '<span class="mission-status">COMPLETED</span>' : locked ? '<span class="mission-status">LOCKED — COMPLETE PREVIOUS LEVEL</span>' : ''}
       </div>`;
     }).join('');
-    const campaignFinished = current && completed.has(current.level) && current.level === CAMPAIGN_MISSIONS.length;
-    const action = current && !game.activeMission && !campaignFinished ? `<button class="menu-btn primary" id="start-campaign-now">START LEVEL ${current.level}</button>` : (campaignFinished ? `<div class="mission-status">🏆 CAMPAIGN COMPLETE — ALL 20 LEVELS FINISHED</div>` : '');
+    // The campaign level is the authoritative unlock pointer. A completed
+    // level always exposes the next level instead of leaving the player stuck.
+    const unlockedLevel = Math.min(CAMPAIGN_MISSIONS.length, Math.max(1, Number(game.state.player.campaignLevel) || 1));
+    const campaignFinished = completed.has(CAMPAIGN_MISSIONS.length);
+    const action = !game.activeMission && !campaignFinished
+      ? `<button class="menu-btn primary" id="start-campaign-now">START LEVEL ${unlockedLevel}</button>`
+      : (campaignFinished ? `<div class="mission-status">🏆 CAMPAIGN COMPLETE — ALL 20 LEVELS FINISHED</div>` : '');
     const jobs = POIS.jobs.map(j => `<div class="vehicle-card mission-card"><div class="mission-number">SIDE JOB</div><h3>${j.name}</h3><p>Drive to the gold marker and complete the job.</p><button class="menu-btn" data-job="${j.type}">START SIDE JOB</button></div>`).join('');
     const dc = game.getDailyChallengeStatus?.();
     const daily = dc ? `<div class="daily-challenge-card ${dc.completed?'daily-done':''}"><div class="daily-badge">DAILY LIVE</div><h2>🔥 ${dc.title}</h2><p><strong>DO THIS:</strong> ${dc.text}</p><div class="daily-progress">${dc.completed ? '✓ COMPLETE' : `${Math.min(dc.value, dc.target).toFixed(dc.id==='distance'||dc.id==='speed'?1:0)} / ${dc.target}`}</div><p class="mission-reward">REWARD: <b>${game.economy.format(dc.reward)}</b> + <b>${dc.xp} XP</b> • STREAK: <b>${dc.streak} DAYS</b></p></div>` : '';
     this.openPanel('CAMPAIGN MISSIONS', `${daily}<div class="mission-brief campaign-brief"><strong>YOUR CAREER — 20 LEVELS</strong><span>Complete the levels in order. Every level gives CASH + XP and unlocks the next one.</span>${action}</div><div class="campaign-list">${campaign}</div><h3 style="margin:20px 0 10px;color:#00d4ff">SIDE JOBS</h3>${jobs}`);
-    this.$('start-campaign-now')?.addEventListener('click', () => { this.closePanel(); game.startCampaignMission(); });
+    this.$('start-campaign-now')?.addEventListener('click', () => {
+      this.closePanel();
+      if (!game.controller || game.mode !== 'driving') game.enterWorld(true, { startGrid: true });
+      const started = game.startCampaignMission();
+      if (!started) this.toast('Unable to start this campaign level. Make sure you are in a vehicle.');
+    });
     this.$('ui-panels').querySelectorAll('[data-job]').forEach(b => {
       b.onclick = () => {
         const j = POIS.jobs.find(x => x.type === b.dataset.job);
         this.closePanel();
-        game.startJob(j);
+        if (!game.controller || game.mode !== 'driving') game.enterWorld(true, { startGrid: true });
+        if (!game.startJob(j)) this.toast('Unable to start this job. Make sure you are in a vehicle.');
       };
     });
   }
@@ -583,7 +594,8 @@ export class UI {
       b.onclick = () => {
         const r = POIS.races.find(x => x.id === b.dataset.race);
         this.closePanel();
-        game.startRace(r);
+        if (!game.controller || game.mode !== 'driving') game.enterWorld(true, { startGrid: true });
+        if (!game.startRace(r)) this.toast('Unable to start this race. Make sure you are in a vehicle.');
       };
     });
   }

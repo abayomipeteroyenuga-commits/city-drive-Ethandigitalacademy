@@ -353,3 +353,8 @@
 @media(max-width:430px){
  #main-menu .landing-menu-grid{grid-template-columns:1fr}
 }
+
+/* Landing feature cards are interactive controls. */
+#main-menu .landing-menu-card{appearance:none;-webkit-appearance:none;width:100%;font:inherit;color:inherit;cursor:pointer;text-align:left}
+#main-menu .landing-menu-card:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.2);filter:brightness(1.08)}
+#main-menu .landing-menu-card:focus-visible{outline:2px solid #fff;outline-offset:2px}
