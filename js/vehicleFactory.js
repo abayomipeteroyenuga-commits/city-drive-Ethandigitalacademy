@@ -50,6 +50,13 @@ export function createVehicleMesh(def){
   else if(def.id==='vortex_x'||def.id==='falcon_sport'||def.id==='street_hawk'||def.id==='thunder_r'||def.id==='metro_bus') buildSport(g,def,c,s);
   else if(def.id==='titan_muscle') buildMuscle(g,def,c,s);
   else buildSedan(g,def,c,s);
+  // Mark only the primary body paint materials. This keeps glass, lights, wheels
+  // and chrome from being recolored when the player changes vehicle paint.
+  g.traverse(ch => {
+    if(ch.isMesh && ch.material && ch.material.color && ch.material.color.getHex() === Number(c)) {
+      ch.userData.paintable = true;
+    }
+  });
   return g;
 }
 

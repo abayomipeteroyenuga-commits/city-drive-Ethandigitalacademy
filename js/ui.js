@@ -15,6 +15,10 @@ export class UI {
     this.input = new Input();
     this.input.bindMobile();
     this.toastTimer = null;
+    if (!document.getElementById('city-drive-paint-css')) {
+      const s = document.createElement('style'); s.id='city-drive-paint-css'; s.textContent = `
+        .paint-choice-grid{display:grid;grid-template-columns:repeat(4,minmax(90px,1fr));gap:10px;margin:16px 0}.paint-choice{height:70px;border:2px solid rgba(255,255,255,.16);border-radius:12px;cursor:pointer;position:relative;overflow:hidden;box-shadow:0 8px 20px rgba(0,0,0,.3)}.paint-choice span{position:absolute;left:0;right:0;bottom:0;padding:5px 3px;background:rgba(0,0,0,.6);color:#fff;font-size:9px;font-weight:800;letter-spacing:.04em}.paint-choice.active{border-color:#fff;box-shadow:0 0 0 2px rgba(0,212,255,.35),0 8px 22px rgba(0,0,0,.4)}@media(max-width:600px){.paint-choice-grid{grid-template-columns:repeat(2,1fr)}}`; document.head.appendChild(s);
+    }
   }
 
   $(id) { return document.getElementById(id); }
@@ -40,6 +44,33 @@ export class UI {
     if (window.innerWidth <= 600) this.$('mobile-controls').classList.remove('hidden');
   }
 
+
+
+  openEmoteWheel(game) {
+    if (this.$('emote-wheel')) { this.$('emote-wheel').remove(); return; }
+    const root = document.createElement('div');
+    root.id = 'emote-wheel';
+    root.innerHTML = `<div class="emote-wheel-card">
+      <div class="emote-wheel-title">EMOTES <small>Press B anytime</small></div>
+      <div class="emote-grid">
+        <button data-emote="Wave|👋">👋<span>WAVE</span></button>
+        <button data-emote="Thumbs Up|👍">👍<span>GOOD JOB</span></button>
+        <button data-emote="Celebrate|🎉">🎉<span>CELEBRATE</span></button>
+        <button data-emote="Laugh|😂">😂<span>LAUGH</span></button>
+        <button data-emote="Cool|😎">😎<span>COOL</span></button>
+        <button data-emote="Love|❤️">❤️<span>LOVE IT</span></button>
+      </div>
+      <button class="emote-close">CLOSE</button>
+    </div>`;
+    document.body.appendChild(root);
+    const close = () => root.remove();
+    root.querySelectorAll('[data-emote]').forEach(btn => btn.addEventListener('click', () => {
+      const [name, emoji] = btn.dataset.emote.split('|');
+      game.triggerEmote(name, emoji);
+      close();
+    }));
+    root.querySelector('.emote-close').addEventListener('click', close);
+  }
 
   setVehicleSelectionMode(on) {
     document.body.classList.toggle('vehicle-selection-mode', !!on);
@@ -128,6 +159,23 @@ export class UI {
     refresh();
   }
 
+  _updateMissionTimer(game) {
+    const el = this.$('mission-timer');
+    if (!el) return;
+    const m = game.activeMission;
+    if (!m?.campaign || !m.deadline) { this._hideMissionTimer(); return; }
+    const seconds = Math.max(0, Math.ceil((m.deadline - performance.now()) / 1000));
+    const mins = Math.floor(seconds / 60);
+    const secs = String(seconds % 60).padStart(2, '0');
+    el.textContent = `TIME LEFT  ${mins}:${secs}`;
+    el.classList.toggle('urgent', seconds <= 30);
+    el.classList.remove('hidden');
+  }
+
+  _hideMissionTimer() {
+    this.$('mission-timer')?.classList.add('hidden');
+  }
+
   toast(msg) {
     const el = this.$('toast');
     el.textContent = msg;
@@ -179,13 +227,14 @@ export class UI {
         if (game.activeMission.dest) {
           const p = game.controller?.mesh.position || game.playerMesh.position;
           const d = Math.hypot(p.x - game.activeMission.dest.x, p.z - game.activeMission.dest.z);
-          this.$('mission-distance').textContent = `DISTANCE: ${(d / 10).toFixed(1)} km  •  REWARD: ${game.economy.format(cm.reward)} + ${cm.xp} XP`;
+          this.$('mission-distance').textContent = `DISTANCE: ${(d / 100).toFixed(1)} km  •  REWARD: ${game.economy.format(cm.reward)} + ${cm.xp} XP`;
         } else {
           this.$('mission-distance').textContent = `REWARD: ${game.economy.format(cm.reward)} + ${cm.xp} XP`;
         }
         this.$('mission-help').textContent = isStagedJob
           ? `CAMPAIGN LEVEL ${cm.level}/${CAMPAIGN_MISSIONS.length} • STEP ${stage === 0 ? '1/2 — PICKUP' : '2/2 — DELIVERY'} • FOLLOW THE COLORED ROUTE`
           : `CAMPAIGN LEVEL ${cm.level}/${CAMPAIGN_MISSIONS.length} • COMPLETE THIS OBJECTIVE TO UNLOCK LEVEL ${Math.min(cm.level + 1, CAMPAIGN_MISSIONS.length)}`;
+        this._updateMissionTimer(game);
         const rivals = game._campaignRivals || [];
         if (rivals.length) {
           const order = [...rivals].sort((a,b) => (b.progress || 0) - (a.progress || 0));
@@ -195,19 +244,21 @@ export class UI {
           this.$('mission-reward').textContent = `🏆 REWARD  ${game.economy.format(cm.reward)}  +  ${cm.xp} XP`;
         }
       } else if (game.activeMission.kind === 'job') {
+        this._hideMissionTimer();
         const p = game.controller?.mesh.position || game.playerMesh.position;
         const d = Math.hypot(p.x - game.activeMission.dest.x, p.z - game.activeMission.dest.z);
         this.$('mission-objective').textContent = '🎯 DRIVE TO: ' + game.activeMission.dest.name;
-        this.$('mission-distance').textContent = 'DISTANCE: ' + (d / 10).toFixed(1) + ' km';
+        this.$('mission-distance').textContent = 'DISTANCE: ' + (d / 100).toFixed(1) + ' km';
         this.$('mission-help').textContent = 'STEP 1/1 • FOLLOW THE GOLD MARKER • ARRIVE SAFELY';
       } else {
+        this._hideMissionTimer();
         const total = game.activeMission.checkpoints?.length || 0;
         const current = total ? Math.min(game.activeMission.index + 1, total) : 0;
         this.$('mission-objective').textContent = `🏁 CHECKPOINT ${current} OF ${total}`;
         this.$('mission-distance').textContent = 'FOLLOW THE COLORED CHECKPOINTS';
         this.$('mission-help').textContent = `RACE • PASS CHECKPOINT ${current} • FINISH TO GET PAID`;
       }
-    } else { mp.classList.add('hidden'); this.$('mission-reward').textContent = ''; }
+    } else { mp.classList.add('hidden'); this.$('mission-reward').textContent = ''; this._hideMissionTimer(); }
 
     // Live destination tracker: always tells the driver exactly where they are going.
     const tracker = this.$('destination-tracker');
@@ -252,6 +303,11 @@ export class UI {
   drawMinimap(game) {
     const c = this.$('minimap');
     if (!c) return;
+    // The minimap is visual-only; update it at ~15 FPS instead of every render frame
+    // to reduce 2D canvas work on phones/tablets without affecting gameplay.
+    const now = performance.now();
+    if (this._minimapLast && now - this._minimapLast < 66) return;
+    this._minimapLast = now;
     const ctx = c.getContext('2d');
     const w = c.width, h = c.height;
     ctx.fillStyle = '#122018';
@@ -409,8 +465,8 @@ export class UI {
         return;
       }
       if (e.code === 'KeyC') {
-        const colors = [0x4488cc, 0xcc3344, 0x111111, 0xffffff, 0xffaa00, 0x22aa66, 0x7b5cff];
-        game.paintVehicle(v, colors[Math.floor(Math.random() * colors.length)]);
+        this.openPaint(game, v);
+        return;
       }
       if (e.code === 'KeyU') this.openUpgrades(game, v);
       if (e.code === 'KeyR') {
@@ -438,11 +494,31 @@ export class UI {
           if (v && confirm('Sell this vehicle?')) { game.sellVehicleByUid(v.vehicleUid); this.openGarage(game); }
         } else if (act === 'upgrade') { if (v) this.openUpgrades(game, v); }
         else if (act === 'paint') {
-          const colors = [0x4488cc, 0xcc3344, 0x111111, 0xffffff, 0xffaa00, 0x22aa66, 0x7b5cff];
-          if (v) game.paintVehicle(v, colors[Math.floor(Math.random() * colors.length)]);
+          if (v) this.openPaint(game, v);
         }
       };
     });
+  }
+
+  openPaint(game, v) {
+    const colors = [
+      ['Emerald Green',0x1f5b3a], ['Pearl White',0xf2f4f5], ['Obsidian Black',0x111318],
+      ['Crimson Red',0xc51f32], ['Electric Blue',0x1f6fff], ['Champagne Gold',0xd4a72c],
+      ['Royal Purple',0x6d3fd1], ['Sunset Orange',0xf27a21]
+    ];
+    const current = Number(v.customization?.primaryColor ?? v.color ?? 0x1f5b3a) >>> 0;
+    const swatches = colors.map(([name,hex]) => `<button type="button" class="paint-choice" data-color="${hex}" title="${name}" style="background:#${hex.toString(16).padStart(6,'0')}"><span>${name}</span></button>`).join('');
+    this.openPanel('PAINT SHOP — ' + v.name, `
+      <p style="color:#8aa;font-size:.82rem">Choose a finish for your vehicle. Paint costs ${game.economy.format(250)}.</p>
+      <div class="paint-choice-grid">${swatches}</div>
+      <button class="menu-btn" id="paint-back">BACK</button>
+    `);
+    this.$('ui-panels').querySelectorAll('.paint-choice').forEach(b => {
+      const hex = Number(b.dataset.color) >>> 0;
+      b.classList.toggle('active', hex === current);
+      b.onclick = () => { if (game.paintVehicle(v, hex)) { this.openPaint(game, v); } };
+    });
+    this.$('paint-back').onclick = () => this.openGarage(game);
   }
 
   openUpgrades(game, v) {

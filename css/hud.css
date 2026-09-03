@@ -145,15 +145,16 @@
   box-shadow: 0 10px 30px rgba(0,0,0,.28);
   backdrop-filter: blur(10px);
   position: absolute;
-  top: 70px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(8, 10, 20, 0.88);
-  border: 1px solid rgba(0, 212, 255, 0.3);
-  border-radius: 10px;
-  padding: 12px 20px;
-  text-align: center;
+  top: 72px;
+  left: 24px;
+  transform: none;
+  width: min(430px, calc(50vw - 42px));
   min-width: 280px;
+  background: rgba(8, 10, 20, 0.9);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  border-radius: 12px;
+  padding: 12px 16px;
+  text-align: left;
 }
 
 #mission-title {
@@ -240,7 +241,7 @@
 .daily-badge{font-size:.62rem;font-weight:900;letter-spacing:.15em;color:#ffcc33}.daily-challenge-card h2{margin:5px 0;font-size:1.2rem}.daily-progress{font-size:1rem;font-weight:900;color:#00ff9d;margin:8px 0}
 
 /* LIVE DESTINATION TRACKER */
-#destination-tracker{position:fixed;top:92px;left:50%;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:12px;min-width:310px;max-width:min(620px,90vw);padding:10px 16px;border:1px solid var(--tracker-color,#00d4ff);border-left:5px solid var(--tracker-color,#00d4ff);border-radius:12px;background:rgba(4,10,16,.88);box-shadow:0 0 22px color-mix(in srgb,var(--tracker-color,#00d4ff) 35%,transparent);backdrop-filter:blur(8px);transition:.2s}
+#destination-tracker{position:fixed;top:72px;right:24px;left:auto;transform:none;z-index:30;display:flex;align-items:center;gap:12px;width:min(430px,calc(50vw - 42px));min-width:280px;max-width:430px;padding:10px 16px;border:1px solid var(--tracker-color,#00d4ff);border-left:5px solid var(--tracker-color,#00d4ff);border-radius:12px;background:rgba(4,10,16,.9);box-shadow:0 0 22px color-mix(in srgb,var(--tracker-color,#00d4ff) 35%,transparent);backdrop-filter:blur(8px);transition:.2s}
 #destination-tracker.hidden{display:none}
 #tracker-arrow-wrap{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.06);flex:0 0 auto}
 #tracker-arrow{display:block;color:var(--tracker-color,#00d4ff);font-size:23px;text-shadow:0 0 10px var(--tracker-color,#00d4ff);transition:transform .15s linear}
@@ -249,3 +250,47 @@
 #tracker-name{font-size:14px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #tracker-distance{font-size:11px;color:#9db0bd}
 @media(max-width:600px){#destination-tracker{top:72px;min-width:240px;padding:8px 11px}.tracker-copy #tracker-name{font-size:12px}}
+
+#mission-timer{display:inline-flex;align-items:center;justify-content:center;margin:8px 0 6px;padding:5px 10px;border:1px solid rgba(255,204,51,.35);border-radius:7px;background:rgba(255,204,51,.08);color:#ffcc33;font-size:12px;font-weight:950;letter-spacing:.12em}#mission-timer.urgent{color:#ff5a5a;border-color:rgba(255,90,90,.6);background:rgba(255,90,90,.1);animation:missionTimerPulse .8s ease-in-out infinite alternate}@keyframes missionTimerPulse{from{opacity:.72}to{opacity:1}}
+@media(max-width:900px){#mission-panel{left:12px;width:calc(50vw - 18px);min-width:0}#destination-tracker{right:12px;width:calc(50vw - 18px);min-width:0}}
+@media(max-width:600px){#mission-panel{top:64px;left:10px;width:calc(100vw - 20px);min-width:0;padding:9px 12px}#destination-tracker{top:176px;right:10px;width:calc(100vw - 20px);min-width:0;max-width:none;padding:8px 11px}.tracker-copy #tracker-name{font-size:12px}}
+
+
+/* FINAL RESPONSIVE HUD PASS — laptop, tablet and mobile safe areas */
+#top-bar{z-index:45;max-width:calc(100vw - 360px)}
+@media (max-width:1100px){
+  #top-bar{gap:14px;padding:7px 15px;max-width:calc(100vw - 320px)}
+  #minimap-container{width:150px;height:150px;}
+}
+@media (max-width:760px){
+  #top-bar{top:max(8px,env(safe-area-inset-top));gap:9px;padding:6px 10px;max-width:calc(100vw - 220px);font-size:.78rem}
+  #money-display{font-size:.9rem}.wanted-stars{font-size:.8rem}#level-display{font-size:.75rem}
+  #minimap-container{top:max(8px,env(safe-area-inset-top));right:8px;width:108px;height:108px}
+  #mission-panel{top:calc(max(8px,env(safe-area-inset-top)) + 50px);}
+  #destination-tracker{top:calc(max(8px,env(safe-area-inset-top)) + 160px);}
+}
+@media (max-width:480px){
+  #top-bar{max-width:calc(100vw - 128px);gap:6px;padding:5px 8px}
+  #money-display{font-size:.78rem}#wanted-stars{min-width:35px;font-size:.72rem;letter-spacing:1px}#level-display{font-size:.68rem}
+  #minimap-container{width:92px;height:92px;top:max(6px,env(safe-area-inset-top));right:6px}
+  #mission-panel{top:112px!important;left:7px!important;width:calc(100vw - 14px)!important;padding:8px 10px!important}
+  #destination-tracker{top:222px!important;left:7px!important;right:auto!important;width:calc(100vw - 14px)!important}
+  #mission-objective{font-size:.86rem}#mission-distance{font-size:.7rem}#mission-help{font-size:.58rem}
+}
+@media (max-height:520px) and (orientation:landscape){
+  #top-bar{top:5px;padding:4px 9px}
+  #minimap-container{width:90px;height:90px;top:5px;right:5px}
+  #mission-panel{top:58px!important;left:8px!important;width:42vw!important;padding:6px 9px!important}
+  #destination-tracker{top:58px!important;right:8px!important;left:auto!important;width:42vw!important;min-width:0;padding:6px 9px!important}
+  #mobile-controls .ctrl-btn{margin-bottom:env(safe-area-inset-bottom)}
+}
+
+
+/* EMOTE SYSTEM */
+#emote-wheel{position:fixed;inset:0;z-index:90;display:grid;place-items:center;background:rgba(2,7,12,.48);backdrop-filter:blur(6px);padding:20px}
+#emote-wheel-card{width:min(420px,92vw);padding:20px;border:1px solid rgba(0,212,255,.35);border-radius:20px;background:rgba(5,12,20,.96);box-shadow:0 20px 70px rgba(0,0,0,.55);text-align:center}
+.emote-wheel-title{font-size:16px;font-weight:950;letter-spacing:.14em;color:#fff;margin-bottom:14px}.emote-wheel-title small{display:block;margin-top:5px;font-size:9px;color:#8da1b1;letter-spacing:.08em}
+.emote-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.emote-grid button{min-height:88px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.045);color:#fff;font-size:31px;cursor:pointer;transition:.15s}.emote-grid button:hover,.emote-grid button:active{transform:translateY(-2px);border-color:#00d4ff;background:rgba(0,212,255,.10)}.emote-grid span{display:block;font-size:9px;font-weight:900;letter-spacing:.1em;margin-top:5px;color:#9db0bd}
+.emote-close{margin-top:13px;width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#fff;font-weight:900;cursor:pointer}
+#city-drive-emote-bubble{position:fixed;transform:translate(-50%,-100%) scale(var(--emote-scale,1));z-index:75;pointer-events:none;opacity:0;transition:opacity .15s,transform .12s;padding:8px 11px;border-radius:14px;background:rgba(3,9,15,.92);border:1px solid rgba(0,212,255,.45);box-shadow:0 8px 24px rgba(0,0,0,.4);display:flex;align-items:center;gap:7px;white-space:nowrap}.emote-bubble-icon{font-size:25px}.emote-bubble-label{font-size:9px;font-weight:950;letter-spacing:.08em;color:#fff}.emote-bubble-label:before{content:''}#city-drive-emote-bubble.show{opacity:1}
+@media(max-width:600px){.emote-grid{gap:7px}.emote-grid button{min-height:78px;font-size:27px}.emote-grid span{font-size:8px}.emote-btn{font-size:9px!important;padding-inline:8px!important}}

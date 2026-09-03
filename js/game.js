@@ -12,6 +12,8 @@ import { AudioSystem } from './audio.js';
 import { Settings } from './settings.js';
 import { Multiplayer, makeRoomCode } from './multiplayer.js';
 import { CAMPAIGN_MISSIONS, getCampaignMission, getCampaignColor, getCampaignDestination, getCampaignJobStages, getCampaignRaceCheckpoints, getDailyChallenge, getDailyDateKey } from './missions.js';
+
+const STARTER_GWAGON_GREEN = 0x1f5b3a;
 import { SHOP_ITEMS, getShopItem } from './shop.js';
 import { getCareerScore, saveLocalRank } from './ranking.js';
 
@@ -36,10 +38,20 @@ export class Game {
     this.destinationTrackerColor = 0x00d4ff;
     // Three AI rivals accompany every campaign level and are capped before the finish.
     this._campaignRivals = [];
+    this._emoteScreenPoint = new THREE.Vector3();
+    this.emoteState = { name: '', emoji: '', until: 0, pulse: 0 };
+    if (this._emoteBubble) { this._emoteBubble.remove(); this._emoteBubble = null; }
+    this._emoteScreenPoint = new THREE.Vector3();
+    this.levelCelebration = null;
 
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+    const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    const isSmallScreen = Math.min(window.innerWidth, window.innerHeight) <= 820;
+    const savedGraphics = Settings.get('graphics') || 'auto';
+    const useAntialias = savedGraphics === 'low' ? false : (!isTouchDevice && !isSmallScreen);
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: useAntialias, powerPreference: isTouchDevice ? 'low-power' : 'high-performance' });
+    this.renderer.setSize(window.innerWidth, window.innerHeight, false);
+    const dprCap = isTouchDevice ? 1.25 : (isSmallScreen ? 1.45 : 1.75);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, dprCap));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.08;
@@ -74,7 +86,7 @@ export class Game {
   }
 
   _freshState() {
-    const starter = cloneVehicle(getVehicleById('metro_s'), { currentFuel: 70, currentMileage: 12, isOwned: true });
+    const starter = cloneVehicle(getVehicleById('metro_s'), { currentFuel: 70, currentMileage: 12, isOwned: true, currentCondition: 100, customization: { primaryColor: STARTER_GWAGON_GREEN, secondaryColor: getVehicleById('metro_s')?.secondaryColor, wheels: 0, tint: 0, headlights: 0, spoiler: 0, underglow: 0, colorCustomized: false } });
     return {
       player: {
         name: 'Driver',
@@ -147,15 +159,20 @@ export class Game {
     }
 
     for (const x of [-0.42, 0.42]) {
+      const side = x < 0 ? 'L' : 'R';
       const arm = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.62, 0.18), shirt);
+      arm.name = `david_arm_${side}`;
       arm.position.set(x, 1.16, 0);
       arm.rotation.z = x < 0 ? 0.08 : -0.08;
       arm.castShadow = true;
       g.add(arm);
       const hand = new THREE.Mesh(new THREE.SphereGeometry(0.105, 10, 7), skin);
-      hand.position.set(x, 0.84, 0);
+      hand.name = `david_hand_${side}`;
+      // Parent the hand to the arm so the celebration pose visibly raises
+      // the complete arm + hand together.
+      hand.position.set(0, 0.36, 0);
       hand.castShadow = true;
-      g.add(hand);
+      arm.add(hand);
     }
 
     const chain = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.018, 6, 24, Math.PI * 1.65), new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9, roughness: 0.22 }));
@@ -184,6 +201,7 @@ export class Game {
   _resetSessionRuntime() {
     if (this._tdTimer) { clearTimeout(this._tdTimer); this._tdTimer = null; }
     this.testDrive = null;
+    this.levelCelebration = null;
     this.activeMission = null;
     this._clearMissionWaypoint();
     this._clearRoute();
@@ -205,6 +223,7 @@ export class Game {
     this._resetSessionRuntime();
     this.isNewGameSession = true;
     this.state = this._freshState();
+    this._pendingVehicleColor = null;
     this.state.player.name = name || 'Driver';
     this.economy.money = this.state.player.money;
     this._ensureDailyChallenge();
@@ -221,6 +240,18 @@ export class Game {
     this._resetSessionRuntime();
     this.state.player = { ...this.state.player, ...data.player };
     this.state.garage = data.garage || this.state.garage;
+    // Legacy saves sometimes carried the old black G-Wagon. New games must
+    // always start with the requested green G-Wagon; preserve deliberate
+    // player repaint choices via colorCustomized.
+    (this.state.garage.vehicles || []).forEach(v => {
+      if (v?.id === 'metro_s') {
+        v.customization = v.customization || {};
+        if (!v.customization.colorCustomized && (!v.customization.primaryColor || Number(v.customization.primaryColor) === 0x111111 || Number(v.customization.primaryColor) === 0x000000)) {
+          v.customization.primaryColor = STARTER_GWAGON_GREEN;
+          v.color = STARTER_GWAGON_GREEN;
+        }
+      }
+    });
     (this.state.garage.vehicles || []).forEach(v => {
       if (!v.vehicleUid) v.vehicleUid = 'veh_mig_' + Math.random().toString(36).slice(2, 9);
       v.isOwned = true;
@@ -376,6 +407,7 @@ export class Game {
       // is hidden. Always perform a real world entry here so START LEVEL never
       // leaves the player on a blank screen.
       this.enterWorld(true, { startGrid: true });
+      if (this._pendingVehicleColor != null) { this.setVehicleColor(owned, this._pendingVehicleColor, false); this._pendingVehicleColor = null; }
       this.startCampaignMission();
       return true;
     }
@@ -390,6 +422,7 @@ export class Game {
     this.enterVehicle(actor);
     this.persist();
     this.enterWorld(true, { startGrid: true });
+    if (this._pendingVehicleColor != null) { this.setVehicleColor(bought, this._pendingVehicleColor, false); this._pendingVehicleColor = null; }
     this.startCampaignMission();
     return true;
   }
@@ -433,7 +466,9 @@ export class Game {
 
   _loop = () => {
     requestAnimationFrame(this._loop);
-    const dt = Math.min(0.05, this.clock.getDelta());
+    const rawDt = this.clock.getDelta();
+    const dt = this.cityDriveSafeDelta(rawDt);
+    if (window.CityDrivePerformance) { window.CityDrivePerformance.observe(dt); window.CityDrivePerformance.apply(this.renderer); }
     if (this.inMenu) {
       if (this._menuPreviewMesh) this._menuPreviewMesh.rotation.y += dt * 0.28;
       this.render();
@@ -446,7 +481,7 @@ export class Game {
     }
     this.update(dt);
     this._shadowTick = (this._shadowTick || 0) + 1;
-    if (this.renderer.shadowMap.enabled && this._shadowTick % 3 === 0) this.renderer.shadowMap.needsUpdate = true;
+    if (this.renderer.shadowMap.enabled && this._shadowTick % 20 === 0) this.renderer.shadowMap.needsUpdate = true;
     this.render();
   };
 
@@ -472,12 +507,23 @@ export class Game {
     }
     if (this.world.weather === 'rain') this.flags.rain = true;
 
-    if (input.consumeCamera()) this.cameraMode = (this.cameraMode + 1) % 4;
+    if (input.consumeCamera()) {
+      this.cameraMode = (this.cameraMode + 1) % 5;
+      const labels = ['CHASE', 'CLOSE CHASE', 'LOW', 'HOOD', 'FRONT VIEW'];
+      this.ui.toast('CAMERA: ' + labels[this.cameraMode]);
+    }
     if (input.consumeHeadlights()) {
       this._lightsUserOff = this.headlightsOn; // if currently on, user is turning off
       this.toggleHeadlights(true);
     }
     if (input.consumeHorn()) this.audio.beep(220, 0.28, 'square', 0.1);
+    if (input.consumeEmote()) this.ui.openEmoteWheel(this);
+    this._updateEmote(dt);
+    if (this.levelCelebration) {
+      const elapsed = (performance.now() - this.levelCelebration.started) / 1000;
+      this._setPlayerCelebrationPose(elapsed);
+      if (elapsed >= this.levelCelebration.duration / 1000) this._finishLevelCelebration();
+    }
 
     if (this.mode === 'driving' && this.controller) {
       const wet = this.world.weather === 'rain' ? 0.82 : 1;
@@ -816,6 +862,8 @@ export class Game {
       dest: { name: String(dest.name || 'Destination'), x: Number(dest.x), z: Number(dest.z) },
       startDamage: this.controller?.def.currentCondition ?? 100,
       startTime: performance.now(),
+      timeLimit: opts.campaign ? this._campaignTimeLimit('job') : null,
+      deadline: opts.campaign ? performance.now() + this._campaignTimeLimit('job') * 1000 : null,
       dist
     };
     this._setRoute(start, {x:Number(dest.x), z:Number(dest.z)}, 0x00d4ff);
@@ -891,6 +939,28 @@ export class Game {
     return getCampaignMission(this.state.player.campaignLevel || 1);
   }
 
+  _campaignTimeLimit(type) {
+    // Generous but meaningful campaign timer. The clock starts when the level
+    // begins and is shared across pickup/delivery stages.
+    if (type === 'race') return 150;
+    if (type === 'job') return 210;
+    return 180;
+  }
+
+  _failCampaignMissionByTimeout() {
+    const m = this.activeMission;
+    if (!m?.campaign) return;
+    const level = Number(m.campaign.level || this.state.player.campaignLevel || 1);
+    this.activeMission = null;
+    this._clearMissionWaypoint();
+    this._clearRoute();
+    this._clearRaceMarkers();
+    this._clearRaceAI();
+    this._clearCampaignRivals();
+    this.persist();
+    this.ui.toast(`TIME UP — LEVEL ${level} FAILED. START LEVEL ${level} AGAIN.`);
+  }
+
   startCampaignMission() {
     const m = this.getCampaignMission();
     if (!m || this.mode !== 'driving' || !this.controller) return false;
@@ -903,7 +973,7 @@ export class Game {
       const dest = getCampaignDestination(m.level);
       if (!dest) { this.ui.toast('MISSION DESTINATION UNAVAILABLE'); return false; }
       const p = this.controller.mesh.position;
-      this.activeMission = { kind: 'campaign', campaignType: 'drive', campaign: m, name: `LEVEL ${m.level} — ${m.title}`, dest, startTime: performance.now(), dist: Math.hypot(dest.x - p.x, dest.z - p.z) / 100 };
+      this.activeMission = { kind: 'campaign', campaignType: 'drive', campaign: m, name: `LEVEL ${m.level} — ${m.title}`, dest, startTime: performance.now(), timeLimit: this._campaignTimeLimit(m.type), deadline: performance.now() + this._campaignTimeLimit(m.type) * 1000, dist: Math.hypot(dest.x - p.x, dest.z - p.z) / 100 };
       this._setRoute(p, dest, getCampaignColor(m.level));
       this._setMissionWaypoint(dest.x, dest.z, getCampaignColor(m.level));
     } else if (m.type === 'job') {
@@ -924,7 +994,9 @@ export class Game {
         campaign: m,
         name: `LEVEL ${m.level} — ${m.title}`,
         dest: objectiveDest ? { name: objectiveDest.name, x: objectiveDest.x, z: objectiveDest.z } : null,
-        startTime: performance.now()
+        startTime: performance.now(),
+        timeLimit: this._campaignTimeLimit(m.type),
+        deadline: performance.now() + this._campaignTimeLimit(m.type) * 1000
       };
       if (objectiveDest) {
         const p = this.controller.mesh.position;
@@ -980,16 +1052,95 @@ export class Game {
       this.state.player.campaignLevel = next.level;
       this.ui.toast(`LEVEL ${m.level} COMPLETE! LEVEL ${next.level} UNLOCKED! +${this.economy.format(m.reward)} +${m.xp} XP`);
       this.persist();
-      setTimeout(() => {
-        if (!this.activeMission && this.mode === 'driving' && this.controller) {
-          this.startCampaignMission();
-        }
-      }, 1200);
+      this._startLevelCompleteCelebration(m.level, next.level);
     } else {
       this.state.player.campaignLevel = m.level;
       this.ui.toast(`CAMPAIGN COMPLETE! +${this.economy.format(m.reward)} +${m.xp} XP`);
     }
     this.persist();
+  }
+
+  _startLevelCompleteCelebration(completedLevel, nextLevel) {
+    // Automatic level-finish emote: the driver steps out of the winning car,
+    // raises both hands in celebration, then returns to the car and launches
+    // the newly unlocked level. This is deliberately non-interactive so it
+    // cannot break campaign progression.
+    if (!this.controller?.mesh) return;
+    const car = this.controller.mesh;
+    const ctrl = this.controller;
+    const side = car.rotation.y + Math.PI / 2;
+    this.playerMesh.position.copy(car.position);
+    this.playerMesh.position.x += Math.sin(side) * 2.6;
+    this.playerMesh.position.z += Math.cos(side) * 2.6;
+    this.playerMesh.position.y = 0;
+    this.playerMesh.rotation.y = car.rotation.y;
+    this.playerMesh.visible = true;
+    this.mode = 'onfoot';
+    this.controller = null;
+    this.levelCelebration = {
+      car,
+      ctrl,
+      completedLevel,
+      nextLevel,
+      started: performance.now(),
+      duration: 4200,
+      phase: 'celebrating'
+    };
+    this._setPlayerCelebrationPose(0);
+    this.triggerEmote('LEVEL COMPLETE!', '🎉');
+    this.ui.toast(`LEVEL ${completedLevel} COMPLETE — DRIVER CELEBRATION!`);
+  }
+
+  _setPlayerCelebrationPose(t) {
+    const leftArm = this.playerMesh.getObjectByName('david_arm_L');
+    const rightArm = this.playerMesh.getObjectByName('david_arm_R');
+    const leftHand = this.playerMesh.getObjectByName('david_hand_L');
+    const rightHand = this.playerMesh.getObjectByName('david_hand_R');
+    if (!leftArm || !rightArm) return;
+    const wave = Math.sin(t * 10) * 0.12;
+    leftArm.rotation.z = -0.95 - wave;
+    rightArm.rotation.z = 0.95 + wave;
+    leftArm.rotation.x = Math.sin(t * 6) * 0.08;
+    rightArm.rotation.x = -Math.sin(t * 6) * 0.08;
+    if (leftHand) leftHand.rotation.z = -0.25;
+    if (rightHand) rightHand.rotation.z = 0.25;
+    this.playerMesh.position.y = Math.max(0, Math.sin(t * 5.2) * 0.08);
+  }
+
+  _finishLevelCelebration() {
+    const c = this.levelCelebration;
+    if (!c) return;
+    const car = c.car;
+    const ctrl = c.ctrl;
+    this.levelCelebration = null;
+    // Restore normal player pose before hiding the on-foot avatar.
+    const leftArm = this.playerMesh.getObjectByName('david_arm_L');
+    const rightArm = this.playerMesh.getObjectByName('david_arm_R');
+    if (leftArm) { leftArm.rotation.set(0, 0, 0.08); }
+    if (rightArm) { rightArm.rotation.set(0, 0, -0.08); }
+    this.playerMesh.position.y = 0;
+    this.playerMesh.visible = false;
+    this.mode = 'driving';
+    this.activeActor = this.findActorByUid(this.state.activeVehicleUid) || this.activeActor;
+    this.controller = ctrl || this.activeActor?.ctrl || null;
+    if (this.controller && this.activeActor) {
+      this.controller.speed = 0;
+      this.controller.brake = 0;
+      this.controller.throttle = 0;
+      this.controller.lastPos.copy(car.position);
+      this.cameraMode = 0;
+      this.camera.position.set(
+        car.position.x - Math.sin(car.rotation.y) * 8.5,
+        car.position.y + 3.2,
+        car.position.z - Math.cos(car.rotation.y) * 8.5
+      );
+      this.camera.lookAt(car.position.x, car.position.y + 1.1, car.position.z);
+    }
+    if (c.nextLevel && this.mode === 'driving' && this.controller) {
+      setTimeout(() => {
+        if (!this.levelCelebration && this.mode === 'driving' && this.controller) this.startCampaignMission();
+      }, 350);
+    }
   }
 
   startJob(job, opts = {}) {
@@ -1011,6 +1162,8 @@ export class Game {
       stage: stages ? 0 : null,
       startDamage: this.controller?.def.currentCondition ?? 100,
       startTime: performance.now(),
+      timeLimit: opts.campaign ? this._campaignTimeLimit('job') : null,
+      deadline: opts.campaign ? performance.now() + this._campaignTimeLimit('job') * 1000 : null,
       dist
     };
     this._setRoute(this.controller.mesh.position, dest, opts.campaign ? getCampaignColor(opts.campaign.level) : 0xffcc33);
@@ -1046,6 +1199,8 @@ export class Game {
       checkpoints,
       index: 0,
       startTime: performance.now(),
+      timeLimit: opts.campaign ? this._campaignTimeLimit('race') : null,
+      deadline: opts.campaign ? performance.now() + this._campaignTimeLimit('race') * 1000 : null,
       multiplayer: !!opts.multiplayer || this.mp.active,
       campaign: opts.campaign || null,
       dest: checkpoints[0] ? { name: 'CHECKPOINT 1', x: checkpoints[0].x, z: checkpoints[0].z } : null
@@ -1249,6 +1404,9 @@ export class Game {
   _clearCampaignRivals() {
     (this._campaignRivals || []).forEach(r => { this.scene.remove(r.mesh); this._disposeObject3D(r.mesh); });
     this._campaignRivals = [];
+    this._emoteScreenPoint = new THREE.Vector3();
+    this.emoteState = { name: '', emoji: '', until: 0, pulse: 0 };
+    if (this._emoteBubble) { this._emoteBubble.remove(); this._emoteBubble = null; }
   }
 
   _spawnRaceAI(checkpoints) {
@@ -1306,6 +1464,10 @@ export class Game {
 
   _missionUpdate() {
     if (!this.activeMission || !this.controller) return;
+    if (this.activeMission.campaign && this.activeMission.deadline && performance.now() >= this.activeMission.deadline) {
+      this._failCampaignMissionByTimeout();
+      return;
+    }
     const p = this.controller.mesh.position;
     if (this.activeMission.kind === 'campaign' && this.activeMission.campaignType === 'drive') {
       const d = Math.hypot(p.x - this.activeMission.dest.x, p.z - this.activeMission.dest.z);
@@ -1583,23 +1745,32 @@ export class Game {
     else this.persist();
   }
 
-  paintVehicle(v, color) {
-    const cost = 250;
-    if (!this.economy.canAfford(cost)) { this.ui.toast('INSUFFICIENT FUNDS'); return; }
-    this.economy.spend(cost);
+  setVehicleColor(v, color, charge = false) {
+    if (!v) return false;
+    const hex = Number(color) >>> 0;
+    if (!hex) return false;
+    if (charge) {
+      const cost = 250;
+      if (!this.economy.canAfford(cost)) { this.ui.toast('INSUFFICIENT FUNDS'); return false; }
+      this.economy.spend(cost);
+    }
     v.customization = v.customization || {};
-    v.customization.primaryColor = color;
-    v.color = color;
+    v.customization.primaryColor = hex;
+    v.customization.colorCustomized = true;
+    v.color = hex;
     const actor = this.vehicleActors.find(a => a.def === v);
-    if (actor) {
+    if (actor?.mesh) {
       actor.mesh.traverse(ch => {
-        if (ch.isMesh && ch.material && ch.material.color && ch.name !== 'wheel') {
-          ch.material.color.setHex(color);
-        }
+        if (ch.isMesh && ch.material?.color && ch.userData?.paintable) ch.material.color.setHex(hex);
       });
     }
     this.persist();
-    this.ui.toast('Paint applied');
+    if (charge) this.ui.toast('Paint applied');
+    return true;
+  }
+
+  paintVehicle(v, color) {
+    return this.setVehicleColor(v, color, true);
   }
 
   expandGarage() {
@@ -1635,6 +1806,47 @@ export class Game {
     }
   }
 
+  triggerEmote(name, emoji) {
+    if (this.inMenu || this.paused) return;
+    this.emoteState = { name: String(name || 'Wave'), emoji: String(emoji || '👋'), until: performance.now() + 2200, pulse: 0 };
+    const target = this.mode === 'driving' && this.controller ? this.controller.mesh : this.playerMesh;
+    if (!target) return;
+    if (!this._emoteBubble) {
+      const el = document.createElement('div');
+      el.id = 'city-drive-emote-bubble';
+      el.innerHTML = '<span class="emote-bubble-icon"></span><span class="emote-bubble-label"></span>';
+      document.body.appendChild(el);
+      this._emoteBubble = el;
+    }
+    this._emoteBubble.querySelector('.emote-bubble-icon').textContent = this.emoteState.emoji;
+    this._emoteBubble.querySelector('.emote-bubble-label').textContent = this.emoteState.name.toUpperCase();
+    this._emoteBubble.classList.add('show');
+    if (this.audio?.beep) this.audio.beep(620, 0.08, 'sine', 0.035);
+  }
+
+  _updateEmote(dt) {
+    const now = performance.now();
+    const active = this.emoteState.until > now;
+    const bubble = this._emoteBubble;
+    if (!active) {
+      if (bubble) bubble.classList.remove('show');
+      return;
+    }
+    this.emoteState.pulse += dt * 8;
+    const target = this.mode === 'driving' && this.controller ? this.controller.mesh : this.playerMesh;
+    if (!target || !bubble) return;
+    const p = this._emoteScreenPoint || (this._emoteScreenPoint = new THREE.Vector3());
+    p.copy(target.position);
+    p.y += this.mode === 'driving' ? 2.8 : 2.25;
+    p.project(this.camera);
+    const x = (p.x * .5 + .5) * innerWidth;
+    const y = (-p.y * .5 + .5) * innerHeight;
+    bubble.style.left = `${x}px`;
+    bubble.style.top = `${y}px`;
+    const scale = 1 + Math.sin(this.emoteState.pulse) * .06;
+    bubble.style.setProperty('--emote-scale', scale.toFixed(3));
+  }
+
   _updateCamera(dt) {
     const target = this.mode === 'driving' ? this.controller.mesh : this.playerMesh;
     const heading = this.mode === 'driving' ? this.controller.heading : 0;
@@ -1642,19 +1854,36 @@ export class Game {
       { back: 8.5, up: 3.2 },
       { back: 5.5, up: 2.2 },
       { back: 2.2, up: 1.4 },
-      { back: 0.3, up: 1.35 }
+      { back: 0.3, up: 1.35 },
+      { front: true, distance: 7.2, up: 2.7 }
     ];
-    const m = modes[this.cameraMode];
+    const m = modes[this.cameraMode] || modes[0];
     const isBike = this.mode === 'driving' && this.controller.def.isMotorcycle;
-    const back = isBike ? m.back * 0.85 : m.back;
-    const ox = Math.sin(heading) * -back;
-    const oz = Math.cos(heading) * -back;
-    const desired = new THREE.Vector3(target.position.x + ox, target.position.y + m.up, target.position.z + oz);
+    let desired, look;
+    if (m.front && this.mode === 'driving') {
+      // Front camera: place the camera ahead of the car and look back at its
+      // grille. This makes the G-Wagon front visible during races and turns.
+      const d = m.distance * (isBike ? 0.9 : 1);
+      desired = new THREE.Vector3(
+        target.position.x + Math.sin(heading) * d,
+        target.position.y + m.up,
+        target.position.z + Math.cos(heading) * d
+      );
+      look = target.position.clone();
+      look.y += 1.0;
+      look.x -= Math.sin(heading) * 0.9;
+      look.z -= Math.cos(heading) * 0.9;
+    } else {
+      const back = isBike ? m.back * 0.85 : m.back;
+      const ox = Math.sin(heading) * -back;
+      const oz = Math.cos(heading) * -back;
+      desired = new THREE.Vector3(target.position.x + ox, target.position.y + m.up, target.position.z + oz);
+      look = target.position.clone();
+      look.y += 1.1;
+      look.x += Math.sin(heading) * 4;
+      look.z += Math.cos(heading) * 4;
+    }
     this.camera.position.lerp(desired, 1 - Math.pow(0.001, dt));
-    const look = target.position.clone();
-    look.y += 1.1;
-    look.x += Math.sin(heading) * 4;
-    look.z += Math.cos(heading) * 4;
     this.camera.lookAt(look);
 
     if (this.rain) this.rain.position.copy(target.position);
@@ -1722,7 +1951,11 @@ export class Game {
   _resize() {
     this.camera.aspect = innerWidth / innerHeight;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(innerWidth, innerHeight);
+    const touch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    const small = Math.min(innerWidth, innerHeight) <= 820;
+    const cap = touch ? 1.25 : (small ? 1.45 : 1.75);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, cap));
+    this.renderer.setSize(innerWidth, innerHeight, false);
   }
 
   resetProgress() {

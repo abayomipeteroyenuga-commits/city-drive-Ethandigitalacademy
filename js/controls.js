@@ -15,6 +15,7 @@ export const DEFAULT_BINDS = {
   interact: ['KeyE'],
   headlights: ['KeyF'],
   horn: ['KeyH'],
+  emote: ['KeyB'],
   map: ['KeyM'],
   garage: ['KeyG'],
   pause: ['Escape', 'KeyP'],
@@ -91,6 +92,7 @@ export class Input {
     this.garage = false;
     this.headlights = false;
     this.horn = false;
+    this.emote = false;
     this.jump = false;
     this.sprint = false;
     this.gyroEnabled = false;
@@ -200,6 +202,7 @@ export class Input {
     this.pause = this._heldAction('pause');
     this.headlights = this._heldAction('headlights');
     this.horn = this._heldAction('horn');
+    this.emote = this._heldAction('emote');
     this.jump = this._heldAction('jump');
     this.sprint = this._heldAction('sprint') || !!this.mobileHeld.sprint;
 
@@ -238,6 +241,7 @@ export class Input {
   consumeGarage() { return this.consume('garage'); }
   consumeHeadlights() { return this.consume('headlights'); }
   consumeHorn() { return this.consume('horn'); }
+  consumeEmote() { return this.consume('emote'); }
 
   clearGameplay() {
     this.held.clear();
@@ -245,7 +249,7 @@ export class Input {
     this._consumed.clear();
     this.accel = this.brake = this.left = this.right = false;
     this.handbrake = this.nitro = this.enter = this.camera = false;
-    this.map = this.pause = this.garage = this.headlights = this.horn = this.jump = false;
+    this.map = this.pause = this.garage = this.headlights = this.horn = this.emote = this.jump = false;
     this.sprint = false;
     this.mobileHeld = {};
     this.p2.accel = this.p2.brake = this.p2.left = this.p2.right = false;
@@ -316,6 +320,8 @@ export class Input {
       if (this.gyroEnabled) { this.disableGyroscope(); gyro.classList.remove('active'); gyro.textContent = 'GYRO'; }
       else { const ok = await this.enableGyroscope(); if (ok) { gyro.classList.add('active'); gyro.textContent = 'GYRO ✓'; } }
     });
+    const em = document.getElementById('btn-emote');
+    if (em) em.addEventListener('click', () => { this._fakePress('emote'); });
     const cam = document.getElementById('btn-camera');
     if (cam) cam.addEventListener('click', () => { this._fakePress('camera'); });
     const ex = document.getElementById('btn-exit');

@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 
-var state={selected:null};
+var state={selected:null,selectedColor:null};
 var menuWasOpenedFromBoot=true;
 
 function css(){
@@ -36,6 +36,7 @@ function css(){
  #cityWowMenu .car-class{font-size:10px;color:#8291a7;text-transform:uppercase;letter-spacing:.08em;margin-top:5px}
  #cityWowMenu .selected-panel{margin-top:12px;display:flex;justify-content:space-between;gap:12px;align-items:center;
    border-top:1px solid rgba(255,255,255,.08);padding-top:13px}
+ #cityWowMenu .paint-palette{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}.paint-palette-label{font-size:9px;letter-spacing:.12em;color:#8090a5;font-weight:900;width:100%}.paint-swatch{width:28px;height:28px;border-radius:50%;border:2px solid rgba(255,255,255,.22);cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.35);transition:.15s transform,.15s border}.paint-swatch:hover{transform:scale(1.12);border-color:#fff}.paint-swatch.active{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.2),0 0 16px rgba(255,255,255,.25)}
  #cityWowMenu .selected-showcase{position:relative;height:185px;margin:12px 0 0;border-radius:16px;overflow:hidden;background:radial-gradient(circle at 65% 40%,rgba(0,212,255,.12),transparent 38%),linear-gradient(145deg,#0a1220,#050912);border:1px solid rgba(255,255,255,.08)}
  #cityWowMenu .showcase-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 58%;filter:saturate(1.08) contrast(1.08);display:none}.showcase-photo.gwagon{display:block}.showcase-photo-overlay{position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,9,18,.88) 0%,rgba(5,9,18,.22) 48%,rgba(5,9,18,.45) 100%),linear-gradient(0deg,rgba(3,6,12,.72),transparent 48%);pointer-events:none}.showcase-car{position:absolute;left:8%;right:6%;bottom:23%;height:42%;background:linear-gradient(150deg,#f2f5f8,#708092 25%,#1a2b3b 60%,#060b12);border-radius:28% 42% 15% 12%;box-shadow:inset 0 3px 7px rgba(255,255,255,.65),inset 0 -18px 25px rgba(0,0,0,.75),0 25px 35px rgba(0,0,0,.55);transform:skewX(-4deg)}
  #cityWowMenu .showcase-car:before{content:"";position:absolute;left:27%;top:-48%;width:42%;height:62%;background:linear-gradient(145deg,#bdcad6,#1c3042);clip-path:polygon(20% 100%,32% 15%,73% 0,100% 100%);border-radius:18px}
@@ -88,6 +89,11 @@ function css(){
  #cityWowMenu .front-car{position:absolute;z-index:3;right:4vw;bottom:15%;width:min(61vw,850px);height:42vh;min-height:220px;filter:drop-shadow(0 30px 30px rgba(0,0,0,.7));transform:perspective(900px) rotateY(-7deg);animation:frontCarFloat 5s ease-in-out infinite}.front-gwagon-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center;filter:saturate(1.12) contrast(1.08) drop-shadow(0 28px 22px rgba(0,0,0,.72));mix-blend-mode:screen}.front-car .car-shadow{position:absolute;left:5%;right:3%;bottom:4%;height:18%;border-radius:50%;background:rgba(0,0,0,.8);filter:blur(18px)}.front-car .car-body{position:absolute;left:4%;right:4%;bottom:17%;height:48%;background:linear-gradient(155deg,#dce7f1 0%,#718496 23%,#172b3d 54%,#07101a 100%);border-radius:30% 45% 18% 12% / 45% 55% 20% 18%;box-shadow:inset 0 3px 8px rgba(255,255,255,.8),inset 0 -22px 30px rgba(0,0,0,.7),0 20px 40px rgba(0,212,255,.08)}.front-car .car-roof{position:absolute;left:30%;top:-35%;width:38%;height:60%;background:linear-gradient(150deg,#c8d6e4,#243a4e);clip-path:polygon(18% 100%,35% 12%,73% 0,100% 100%);border-radius:20px}.front-car .car-window{position:absolute;top:-27%;height:37%;background:linear-gradient(145deg,#06121e,#29475c);border:1px solid rgba(180,230,255,.4);clip-path:polygon(18% 100%,32% 15%,100% 0,100% 100%)}.front-car .window-a{left:34%;width:15%}.front-car .window-b{left:50%;width:17%;transform:scaleX(-1)}.front-car .car-hood{position:absolute;right:-2%;top:13%;width:38%;height:48%;background:linear-gradient(160deg,#eef5fb,#65798b 35%,#122536 75%);clip-path:polygon(0 26%,82% 0,100% 76%,35% 100%)}.front-car .car-front{position:absolute;right:-1%;bottom:4%;width:30%;height:42%;background:linear-gradient(90deg,#172b3b,#02070c);clip-path:polygon(35% 0,100% 18%,100% 85%,65% 100%,0 70%);border-radius:0 20px 16px 0}.front-car .car-light{position:absolute;right:7%;top:23%;width:13%;height:8%;background:#dffaff;border-radius:60% 10%;box-shadow:0 0 20px #8fefff,0 0 55px rgba(0,212,255,.65);transform:skewX(-25deg)}.front-car .light-a{right:19%}.front-car .light-b{right:7%}.front-car .car-wheel{position:absolute;bottom:-12%;width:18%;aspect-ratio:1;border-radius:50%;background:#030508;border:10px solid #111923;box-shadow:inset 0 0 0 7px #526274,0 8px 12px #000}.front-car .wheel-a{left:15%}.front-car .wheel-b{right:16%}.front-car .car-wheel span{position:absolute;inset:23%;border-radius:50%;background:#d3dbe2;box-shadow:inset 0 0 0 5px #657381}.front-car .car-line{position:absolute;left:5%;right:7%;top:52%;height:2px;background:rgba(255,255,255,.35);box-shadow:0 14px 20px rgba(0,0,0,.5)}@keyframes frontCarFloat{0%,100%{transform:perspective(900px) rotateY(-7deg) translateY(0)}50%{transform:perspective(900px) rotateY(-7deg) translateY(-7px)}}
  #cityWowMenu .front-footer{position:absolute;z-index:5;bottom:22px;left:5vw;right:5vw;display:flex;justify-content:space-between;color:#52647a;font-size:.5rem;letter-spacing:.18em}.front-footer span:nth-child(2){color:#7d8da1}
  @media(max-width:800px){#cityWowMenu .front-top{top:18px}.front-copy{left:7vw;top:15%;max-width:78vw}.front-copy h1{font-size:clamp(3.8rem,18vw,6rem)}.front-copy p{font-size:.65rem}.front-car{right:-18vw!important;bottom:13%!important;width:95vw!important;height:36vh!important;opacity:.8}.front-actions{flex-direction:column;width:190px}.front-actions button{padding:12px}.front-footer span:nth-child(2){display:none}}
+ #cityWowMenu button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+ @media(max-width:520px){#cityWowMenu .wow-shell{width:94vw;padding:14px 0 22px}#cityWowMenu .wow-hero{margin-bottom:12px}#cityWowMenu .wow-kicker{font-size:9px;letter-spacing:.22em}#cityWowMenu h1{font-size:clamp(34px,12vw,54px)}#cityWowMenu .wow-sub{font-size:12px;line-height:1.45}#cityWowMenu .wow-card{padding:15px}.car-grid{max-height:310px}.selected-showcase{height:155px!important}.wow-actions{grid-template-columns:1fr!important}}
+ @media(max-width:800px){#cityWowMenu .front-shell{overflow:auto;min-height:100%;height:auto}.front-top{top:max(16px,env(safe-area-inset-top))!important}.front-copy{top:12%!important}.front-car{bottom:12%!important;opacity:.78}.front-footer{bottom:max(12px,env(safe-area-inset-bottom))!important}}
+ @media(max-width:520px){#cityWowMenu .front-copy{left:6vw!important;top:13%!important;max-width:88vw!important}.front-copy h1{font-size:clamp(3.2rem,17vw,5.2rem)!important}.front-copy p{letter-spacing:.12em!important;line-height:1.45}.front-actions{width:min(220px,60vw)!important}.front-car{right:-28vw!important;width:110vw!important;height:34vh!important;bottom:11%!important;opacity:.62!important}.front-footer{font-size:.42rem!important;left:6vw!important;right:6vw!important}}
+ @media(max-height:520px) and (orientation:landscape){#cityWowMenu .front-copy{top:10%!important}.front-copy h1{font-size:clamp(2.7rem,10vw,5rem)!important}.front-copy p{margin:12px 0 8px!important}.front-actions{flex-direction:row!important;width:auto!important}.front-car{height:52vh!important;bottom:5%!important;right:-2vw!important;width:64vw!important;opacity:.7!important}}
   `;
  document.head.appendChild(s);
 }
@@ -104,7 +110,7 @@ function getCars(){
 function openVehicleSelection(){
  css();
  var old=document.getElementById("cityWowMenu"); if(old) old.remove();
- var cars=getCars();
+ var cars=getCars().filter(function(c){ return c.fourWheels !== false && c.isMotorcycle !== true; });
  var existingGame=window.game||window.firstGame||window.cityDriveGame;
  var campaignLevel=Math.max(1,Math.min(20,Number(existingGame?.state?.player?.campaignLevel)||1));
  // Always use the authoritative vehicle database and keep the required catalog at 15.
@@ -129,11 +135,12 @@ function openVehicleSelection(){
          <button class="wow-tab" data-filter="commercial">COMMERCIAL</button>
        </div>
        <div class="car-grid" id="wowCarGrid"></div>
-       <div class="selected-showcase"><img class="showcase-photo" id="wowShowcasePhoto" src="assets/gwagon-cut.png" alt="G-Wagon reference"/><div class="showcase-photo-overlay"></div><div class="showcase-label">SELECTED VEHICLE</div><div class="showcase-name" id="wowShowcaseName">G-WAGON</div><div class="showcase-car" id="wowCssShowcaseCar"><div class="showcase-wheel a"></div><div class="showcase-wheel b"></div><div class="showcase-wheel c"></div><div class="showcase-wheel d"></div></div></div>
+       <div class="selected-showcase"><img class="showcase-photo" id="wowShowcasePhoto" src="assets/gwagon-emerald.png" alt="G-Wagon reference"/><div class="showcase-photo-overlay"></div><div class="showcase-label">SELECTED VEHICLE</div><div class="showcase-name" id="wowShowcaseName">G-WAGON</div><div class="showcase-car" id="wowCssShowcaseCar"><div class="showcase-wheel a"></div><div class="showcase-wheel b"></div><div class="showcase-wheel c"></div><div class="showcase-wheel d"></div></div></div>
        <div class="selected-panel">
          <div><div class="selected-name" id="wowSelectedName">Choose a car</div><div class="selected-meta" id="wowSelectedMeta">Level 1 is locked until you choose.</div></div>
          <div>🚗</div>
        </div>
+       <div class="paint-palette" id="wowPaintPalette"><div class="paint-palette-label">CHOOSE YOUR PAINT COLOR</div></div>
        <div class="wow-actions">
          <button class="action secondary" id="wowBack">Back</button>
          <button class="action continue" id="wowStart" disabled>START LEVEL ${campaignLevel}</button>
@@ -159,6 +166,22 @@ function openVehicleSelection(){
  document.body.appendChild(el);
 
  var grid=el.querySelector("#wowCarGrid");
+ var palette=[
+   {name:'Emerald Green',hex:0x1f5b3a},
+   {name:'Pearl White',hex:0xf2f4f5},
+   {name:'Obsidian Black',hex:0x111318},
+   {name:'Crimson Red',hex:0xc51f32},
+   {name:'Electric Blue',hex:0x1f6fff},
+   {name:'Champagne Gold',hex:0xd4a72c},
+   {name:'Royal Purple',hex:0x6d3fd1},
+   {name:'Sunset Orange',hex:0xf27a21}
+ ];
+ var paintPalette=el.querySelector('#wowPaintPalette');
+ palette.forEach(function(pc){ var sw=document.createElement('button'); sw.className='paint-swatch'; sw.type='button'; sw.title=pc.name; sw.setAttribute('aria-label',pc.name); sw.dataset.color=pc.hex.toString(16); sw.style.background='#'+pc.hex.toString(16).padStart(6,'0'); paintPalette.appendChild(sw); });
+ function syncPalette(car){
+   var current=Number(state.selectedColor ?? car?.customization?.primaryColor ?? car?.color ?? palette[0].hex)>>>0;
+   paintPalette.querySelectorAll('.paint-swatch').forEach(function(sw){ sw.classList.toggle('active',sw.dataset.color.toLowerCase()===current.toString(16).padStart(6,'0').toLowerCase()); });
+ }
  function carType(car){
    var t=String(car.type||car.class||'').toLowerCase();
    if(t.includes('commercial') || /van|cargo|truck|pickup/.test(String(car.name||'').toLowerCase())) return 'commercial';
@@ -174,6 +197,7 @@ function openVehicleSelection(){
    b.innerHTML='<div class="car-name">'+(car.name||car.id)+'</div><div class="car-class">'+(car.manufacturer||"CITY DRIVE")+' • '+(car.class||car.type||"street")+'</div><span class="car-type-chip">'+car._wowType.toUpperCase()+'</span>';
    b.onclick=function(){
      state.selected=car.id;
+     state.selectedColor=Number(car.customization?.primaryColor ?? car.color ?? palette[0].hex)>>>0;
      grid.querySelectorAll(".car-btn").forEach(function(x){x.classList.remove("selected");});
      b.classList.add("selected");
      el.querySelector("#wowSelectedName").textContent=car.name||car.id;
@@ -183,10 +207,27 @@ function openVehicleSelection(){
      var isGw=car.id==='metro_s' || String(car.name||'').toLowerCase().includes('g-wagon');
      if(photo) photo.classList.toggle('gwagon',isGw);
      if(cssCar) cssCar.style.display=isGw?'none':'';
+     syncPalette(car);
      el.querySelector("#wowStart").disabled=false;
      el.querySelector(".level-card span").textContent="✓ Ready to start";
    };
    grid.appendChild(b);
+ });
+ paintPalette.querySelectorAll('.paint-swatch').forEach(function(sw){
+   sw.onclick=function(){
+     var hex=parseInt(sw.dataset.color,16)>>>0;
+     state.selectedColor=hex;
+     var car=cars.find(function(c){return c.id===state.selected;});
+     syncPalette(car);
+     var g=window.game||window.cityDriveGame||window.firstGame;
+     var owned=g?.state?.garage?.vehicles?.find(function(v){return v.id===state.selected && v.isOwned!==false;});
+     if(owned && typeof g.setVehicleColor==='function'){
+       g.setVehicleColor(owned,hex,false);
+       if(g.ui?.toast) g.ui.toast('COLOR: '+sw.title);
+     } else if(g?.ui?.toast) {
+       g.ui.toast('COLOR SAVED — IT WILL APPLY WHEN YOU OWN THIS RIDE');
+     }
+   };
  });
  function applyFilter(filter){
    var visible=0;
@@ -228,6 +269,7 @@ function openVehicleSelection(){
      // Use the game's authoritative vehicle-selection API. This correctly
      // activates an already-owned car OR purchases/activates a new selection.
      if(typeof g.driveSelectedVehicle==='function'){
+       g._pendingVehicleColor = state.selectedColor;
        if(!g.driveSelectedVehicle({id:state.selected})) {
          if(g.ui && typeof g.ui.toast==='function') g.ui.toast('This vehicle is not available yet. Complete the required level or check your cash.');
          return;
@@ -268,7 +310,7 @@ function open(){
    </div>
    <div class="front-car" aria-hidden="true">
      <div class="car-shadow"></div>
-     <img class="front-gwagon-photo" src="assets/gwagon-cut.png" alt="Mercedes-Benz G-Wagon"/>
+     <img class="front-gwagon-photo" src="assets/gwagon-emerald.png" alt="Mercedes-Benz G-Wagon"/>
    </div>
    <div class="front-footer"><span>NOVA CITY</span><span>ETHAN DIGITAL ACADEMY</span><span>LEARN • BUILD • GROW • LEAD</span></div>
  </div>`;
