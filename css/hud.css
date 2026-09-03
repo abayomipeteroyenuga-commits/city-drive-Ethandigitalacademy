@@ -238,3 +238,14 @@
 .daily-challenge-card{margin-bottom:16px;padding:16px;border:1px solid rgba(255,204,51,.45);border-radius:14px;background:linear-gradient(135deg,rgba(255,204,51,.09),rgba(0,212,255,.05));box-shadow:0 0 24px rgba(255,204,51,.08)}
 .daily-challenge-card.daily-done{border-color:rgba(0,255,157,.45)}
 .daily-badge{font-size:.62rem;font-weight:900;letter-spacing:.15em;color:#ffcc33}.daily-challenge-card h2{margin:5px 0;font-size:1.2rem}.daily-progress{font-size:1rem;font-weight:900;color:#00ff9d;margin:8px 0}
+
+/* LIVE DESTINATION TRACKER */
+#destination-tracker{position:fixed;top:92px;left:50%;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:12px;min-width:310px;max-width:min(620px,90vw);padding:10px 16px;border:1px solid var(--tracker-color,#00d4ff);border-left:5px solid var(--tracker-color,#00d4ff);border-radius:12px;background:rgba(4,10,16,.88);box-shadow:0 0 22px color-mix(in srgb,var(--tracker-color,#00d4ff) 35%,transparent);backdrop-filter:blur(8px);transition:.2s}
+#destination-tracker.hidden{display:none}
+#tracker-arrow-wrap{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.06);flex:0 0 auto}
+#tracker-arrow{display:block;color:var(--tracker-color,#00d4ff);font-size:23px;text-shadow:0 0 10px var(--tracker-color,#00d4ff);transition:transform .15s linear}
+.tracker-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
+#tracker-label{font-size:10px;font-weight:800;letter-spacing:1.8px;color:var(--tracker-color,#00d4ff)}
+#tracker-name{font-size:14px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tracker-distance{font-size:11px;color:#9db0bd}
+@media(max-width:600px){#destination-tracker{top:72px;min-width:240px;padding:8px 11px}.tracker-copy #tracker-name{font-size:12px}}

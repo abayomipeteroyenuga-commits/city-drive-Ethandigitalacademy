@@ -11,7 +11,7 @@ import { checkAchievements } from './achievements.js';
 import { AudioSystem } from './audio.js';
 import { Settings } from './settings.js';
 import { Multiplayer, makeRoomCode } from './multiplayer.js';
-import { CAMPAIGN_MISSIONS, getCampaignMission, getDailyChallenge, getDailyDateKey } from './missions.js';
+import { CAMPAIGN_MISSIONS, getCampaignMission, getCampaignColor, getDailyChallenge, getDailyDateKey } from './missions.js';
 import { SHOP_ITEMS, getShopItem } from './shop.js';
 import { getCareerScore, saveLocalRank } from './ranking.js';
 
@@ -32,6 +32,8 @@ export class Game {
     this.testDrive = null;
     this.visited = new Set(['downtown']);
     this.missionWaypoint = null;
+    this.destinationTracker = null;
+    this.destinationTrackerColor = 0x00d4ff;
     // Three AI rivals accompany every campaign level and are capped before the finish.
     this._campaignRivals = [];
 
@@ -891,8 +893,8 @@ export class Game {
       if (!dest) return false;
       const p = this.controller.mesh.position;
       this.activeMission = { kind: 'campaign', campaignType: 'drive', campaign: m, name: `LEVEL ${m.level} — ${m.title}`, dest, startTime: performance.now(), dist: Math.hypot(dest.x - p.x, dest.z - p.z) / 100 };
-      this._setRoute(p, dest, 0xffcc33);
-      this._setMissionWaypoint(dest.x, dest.z, 0xffcc33);
+      this._setRoute(p, dest, getCampaignColor(m.level));
+      this._setMissionWaypoint(dest.x, dest.z, getCampaignColor(m.level));
     } else if (m.type === 'job') {
       const job = POIS.jobs.find(j => j.type === m.job);
       if (!job) return false;
@@ -902,7 +904,22 @@ export class Game {
       if (!race) return false;
       return this.startRace(race, { campaign: m });
     } else {
-      this.activeMission = { kind: 'campaign', campaignType: m.type, campaign: m, name: `LEVEL ${m.level} — ${m.title}`, startTime: performance.now() };
+      const objectiveDest = m.type === 'buy'
+        ? LANDMARKS.find(x => x.id === 'market')
+        : LANDMARKS.find(x => x.id === 'garage');
+      this.activeMission = {
+        kind: 'campaign',
+        campaignType: m.type,
+        campaign: m,
+        name: `LEVEL ${m.level} — ${m.title}`,
+        dest: objectiveDest ? { name: objectiveDest.name, x: objectiveDest.x, z: objectiveDest.z } : null,
+        startTime: performance.now()
+      };
+      if (objectiveDest) {
+        const p = this.controller.mesh.position;
+        this._setRoute(p, objectiveDest, getCampaignColor(m.level));
+        this._setMissionWaypoint(objectiveDest.x, objectiveDest.z, getCampaignColor(m.level));
+      }
     }
     this._spawnCampaignRivals();
     this.ui.toast(`LEVEL ${m.level}: ${m.objective}`);
@@ -970,8 +987,8 @@ export class Game {
       startTime: performance.now(),
       dist
     };
-    this._setRoute(this.controller.mesh.position, dest, 0xffcc33);
-    this._setMissionWaypoint(dest.x, dest.z, 0xffcc33);
+    this._setRoute(this.controller.mesh.position, dest, opts.campaign ? getCampaignColor(opts.campaign.level) : 0xffcc33);
+    this._setMissionWaypoint(dest.x, dest.z, opts.campaign ? getCampaignColor(opts.campaign.level) : 0xffcc33);
     if (opts.campaign) this._spawnCampaignRivals();
     this.ui.toast(`MISSION STARTED → ${dest.name}`);
     this.audio.checkpoint();
@@ -995,7 +1012,7 @@ export class Game {
       }
     }
     this._spawnRaceMarkers(checkpoints);
-    this._setMissionWaypoint(checkpoints[0].x, checkpoints[0].z, 0x00ff9d);
+    this._setMissionWaypoint(checkpoints[0].x, checkpoints[0].z, opts.campaign ? getCampaignColor(opts.campaign.level) : 0x00ff9d);
     this.activeMission = {
       kind: 'race',
       type: race.id,
@@ -1004,9 +1021,10 @@ export class Game {
       index: 0,
       startTime: performance.now(),
       multiplayer: !!opts.multiplayer || this.mp.active,
-      campaign: opts.campaign || null
+      campaign: opts.campaign || null,
+      dest: checkpoints[0] ? { name: 'CHECKPOINT 1', x: checkpoints[0].x, z: checkpoints[0].z } : null
     };
-    this._setRoutePoints([this.controller.mesh.position, ...checkpoints], 0x00ff9d);
+    this._setRoutePoints([this.controller.mesh.position, ...checkpoints], opts.campaign ? getCampaignColor(opts.campaign.level) : 0x00ff9d);
     this.flags.raced = true;
     if (this.mp.active && this.mp.role === 'host') {
       this.mp.hostStartRace(race, checkpoints);
@@ -1033,22 +1051,25 @@ export class Game {
 
   _setMissionWaypoint(x, z, color=0xffcc33) {
     this._clearMissionWaypoint();
+    this.destinationTrackerColor = color;
     const g = new THREE.Group();
     const ring = new THREE.Mesh(new THREE.TorusGeometry(4.2, 0.22, 10, 32), new THREE.MeshBasicMaterial({color}));
     ring.rotation.x = Math.PI/2; ring.position.y = 0.25; g.add(ring);
     const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.55, 8, 12), new THREE.MeshBasicMaterial({color, transparent:true, opacity:.28}));
     beam.position.y = 4; g.add(beam);
-    const beacon = new THREE.Mesh(new THREE.SphereGeometry(.42, 16, 10), new THREE.MeshBasicMaterial({color}));
+    const beacon = new THREE.Mesh(new THREE.SphereGeometry(.55, 16, 10), new THREE.MeshBasicMaterial({color}));
     beacon.position.y = 8; g.add(beacon);
     g.position.set(x,0,z); this.scene.add(g); this.missionWaypoint = g;
+    this.destinationTracker = { x:Number(x), z:Number(z), color };
   }
 
   _clearMissionWaypoint() {
     if (this.missionWaypoint) this.scene.remove(this.missionWaypoint);
     this.missionWaypoint = null;
+    this.destinationTracker = null;
   }
 
-  _spawnCampaignRivals() {
+    _spawnCampaignRivals() {
     this._clearCampaignRivals();
     const m = this.activeMission;
     if (!m?.campaign || !this.controller) return;
@@ -1244,10 +1265,17 @@ export class Game {
         this.activeMission.index++;
         this.audio.checkpoint();
         const next = this.activeMission.checkpoints[this.activeMission.index];
-        if (next) this._setMissionWaypoint(next.x, next.z, 0x00ff9d);
+        if (next) {
+          const raceColor = this.activeMission?.campaign ? getCampaignColor(this.activeMission.campaign.level) : 0x00ff9d;
+          this.activeMission.dest = { name: `CHECKPOINT ${this.activeMission.index + 1}`, x: next.x, z: next.z };
+          this._setMissionWaypoint(next.x, next.z, raceColor);
+        } else {
+          this.activeMission.dest = null;
+        }
         const markers = this._raceMarkers || [];
+        const raceColor = this.activeMission?.campaign ? getCampaignColor(this.activeMission.campaign.level) : 0x00ff9d;
         if (markers[this.activeMission.index - 1]) markers[this.activeMission.index - 1].material.color.setHex(0x335544);
-        if (markers[this.activeMission.index]) markers[this.activeMission.index].material.color.setHex(0x00ff9d);
+        if (markers[this.activeMission.index]) markers[this.activeMission.index].material.color.setHex(raceColor);
         if (this.activeMission.index >= this.activeMission.checkpoints.length && !this.activeMission.paid) this._completeRace();
       }
     }

@@ -6,7 +6,7 @@ import { Settings } from './settings.js';
 import { POIS, DISTRICTS, LANDMARKS } from './world.js';
 import { makeRoomCode } from './multiplayer.js';
 import { DEFAULT_BINDS, codeLabel } from './controls.js';
-import { CAMPAIGN_MISSIONS } from './missions.js';
+import { CAMPAIGN_MISSIONS, getCampaignColor } from './missions.js';
 import { SHOP_ITEMS } from './shop.js';
 import { getLocalRank, getCareerScore, getRankTier, syncGlobalRank } from './ranking.js';
 
@@ -204,6 +204,33 @@ export class UI {
       }
     } else { mp.classList.add('hidden'); this.$('mission-reward').textContent = ''; }
 
+    // Live destination tracker: always tells the driver exactly where they are going.
+    const tracker = this.$('destination-tracker');
+    if (tracker) {
+      const mission = game.activeMission;
+      const dest = mission?.dest;
+      if (mission && dest) {
+        const p = game.controller?.mesh.position || game.playerMesh.position;
+        const d = Math.hypot(p.x - Number(dest.x), p.z - Number(dest.z));
+        const level = mission.campaign?.level;
+        const colorNum = level ? getCampaignColor(level) : (mission.kind === 'race' ? 0x00ff9d : 0x00d4ff);
+        const color = '#' + colorNum.toString(16).padStart(6,'0');
+        tracker.classList.remove('hidden');
+        tracker.style.setProperty('--tracker-color', color);
+        this.$('tracker-label').textContent = level ? `LEVEL ${level} DESTINATION` : 'DESTINATION';
+        this.$('tracker-name').textContent = `YOU ARE GOING TO: ${dest.name || mission.name || 'DESTINATION'}`;
+        this.$('tracker-distance').textContent = `${(d / 10).toFixed(1)} KM AWAY`;
+        const heading = game.controller?.mesh?.rotation?.y || 0;
+        const targetAngle = Math.atan2(Number(dest.x)-p.x, Number(dest.z)-p.z);
+        let relative = (targetAngle - heading) * 180 / Math.PI;
+        while (relative > 180) relative -= 360;
+        while (relative < -180) relative += 360;
+        this.$('tracker-arrow').style.transform = `rotate(${relative}deg)`;
+      } else {
+        tracker.classList.add('hidden');
+      }
+    }
+
     const board = this.$('mp-board');
     if (board) {
       if (game.mp?.active) {
@@ -241,14 +268,19 @@ export class UI {
     ctx.fillStyle = '#ffaa00';
     POIS.fuel.forEach(p => ctx.fillRect(sx(p.x) - 2, sy(p.z) - 2, 4, 4));
     if (game.activeRoute?.length > 1) {
-      ctx.strokeStyle = game.activeMission?.kind === 'race' ? '#00ff9d' : '#00d4ff';
+      const level = game.activeMission?.campaign?.level;
+      const colorNum = level ? getCampaignColor(level) : (game.activeMission?.kind === 'race' ? 0x00ff9d : 0x00d4ff);
+      ctx.strokeStyle = '#' + colorNum.toString(16).padStart(6,'0');
       ctx.lineWidth = 4;
       ctx.beginPath();
       game.activeRoute.forEach((p, i) => i ? ctx.lineTo(sx(p.x), sy(p.z)) : ctx.moveTo(sx(p.x), sy(p.z)));
       ctx.stroke();
     }
     if (game.activeMission?.dest) {
-      ctx.fillStyle = '#ffcc33';
+      const level = game.activeMission.campaign?.level;
+      const colorNum = level ? getCampaignColor(level) : (game.activeMission.kind === 'race' ? 0x00ff9d : 0x00d4ff);
+      const missionColor = '#' + colorNum.toString(16).padStart(6,'0');
+      ctx.fillStyle = missionColor;
       ctx.beginPath();
       ctx.moveTo(sx(game.activeMission.dest.x), sy(game.activeMission.dest.z)-5);
       ctx.lineTo(sx(game.activeMission.dest.x)+5, sy(game.activeMission.dest.z));
@@ -556,14 +588,16 @@ export class UI {
     const mission = game.activeMission;
     const route = game.activeRoute || [];
     const currentName = game.world.getDistrict(pos.x, pos.z).name;
+    const mapColorNum = mission?.campaign?.level ? getCampaignColor(mission.campaign.level) : (mission?.kind === 'race' ? 0x00ff9d : mission?.kind === 'gps' ? 0x00d4ff : 0xffd34d);
+    const missionColor = '#' + mapColorNum.toString(16).padStart(6,'0');
     const html = `
       <div class="city-map-wrap">
         <div class="city-map-info">
           <strong>YOU ARE HERE</strong><span>${currentName}</span>
-          ${mission ? `<strong class="map-dest-label" style="color:${mission.kind === 'race' ? '#00ff9d' : mission.kind === 'gps' ? '#00d4ff' : '#ffd34d'}">ACTIVE MISSION</strong><span>${mission.name || mission.dest?.name || 'Mission'}</span>` : '<span class="map-no-route">Choose a destination to reveal your route.</span>'}
+          ${mission ? `<strong class="map-dest-label" style="color:${mission.campaign?.level ? missionColor : (mission.kind === 'race' ? '#00ff9d' : mission.kind === 'gps' ? '#00d4ff' : '#ffd34d')}">ACTIVE MISSION</strong><span>${mission.name || mission.dest?.name || 'Mission'}</span>` : '<span class="map-no-route">Choose a destination to reveal your route.</span>'}
         </div>
         <canvas id="city-map-canvas" width="900" height="650"></canvas>
-        <div class="city-map-legend"><span>● YOU</span><span style="color:#ffd34d">◆ MISSION</span><span style="color:#00ff9d">━ RACE</span><span style="color:#00d4ff">━ GPS</span><span>□ LANDMARK</span></div>
+        <div class="city-map-legend"><span>● YOU</span><span style="color:${missionColor}">◆ ACTIVE DESTINATION</span><span style="color:#00ff9d">━ RACE</span><span style="color:#00d4ff">━ GPS</span><span>□ LANDMARK</span></div>
         <div class="map-actions"><button class="menu-btn primary" id="map-set-dest">SET DESTINATION</button></div>
         <div id="map-destination-list" class="map-destination-list hidden">${LANDMARKS.map(l=>`<button class="menu-btn" data-map-dest="${l.id}">${l.name}</button>`).join('')}</div>
       </div>`;

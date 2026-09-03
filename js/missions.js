@@ -1,6 +1,18 @@
 /**
  * CITY DRIVE — 20-level campaign + rotating daily challenge.
  */
+// Unique destination color for every campaign level (map, route, waypoint, tracker).
+export const CAMPAIGN_COLORS = [
+  0xff4d4d, 0xff8a3d, 0xffc233, 0xd8e43b, 0x76d64b,
+  0x28d7a1, 0x20c9d9, 0x2f8cff, 0x5b6dff, 0x8d5cff,
+  0xb84dff, 0xe34cff, 0xff4fb3, 0xff5f7a, 0xff6b3d,
+  0xffa62b, 0xffd23f, 0xa8d83f, 0x36d98b, 0x00d7ff
+];
+export function getCampaignColor(level) {
+  const n = Math.max(1, Number(level) || 1);
+  return CAMPAIGN_COLORS[(n - 1) % CAMPAIGN_COLORS.length];
+}
+
 export const CAMPAIGN_MISSIONS = [
   { level: 1, title: 'FIRST DELIVERY', type: 'drive', objective: 'Drive to Central Mall', dest: 'central_mall', reward: 500, xp: 100 },
   { level: 2, title: 'CITY COURIER', type: 'job', objective: 'Complete a Delivery Job', job: 'delivery', reward: 650, xp: 120 },
