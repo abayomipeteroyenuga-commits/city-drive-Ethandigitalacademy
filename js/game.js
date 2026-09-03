@@ -37,14 +37,14 @@ export class Game {
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio * 1.15, 2.5));
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.08;
     this.renderer.useLegacyLights = false;
     this.renderer.shadowMap.enabled = Settings.get('graphics') !== 'low';
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.renderer.shadowMap.autoUpdate = true;
+    this.renderer.shadowMap.autoUpdate = false;
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 900);
@@ -307,6 +307,24 @@ export class Game {
     }
   }
 
+  _placeActiveCarOnStartGrid() {
+    if (!this.activeActor?.mesh || !this.activeActor?.ctrl) return false;
+    // Main north/south road: x=0. Keep the player in the left free lane.
+    // heading=0 means the car travels toward +Z in VehicleController.
+    const x = -3.35;
+    const z = -120;
+    this.activeActor.mesh.position.set(x, this.world.getGroundHeight(x, z) + 0.03, z);
+    this.activeActor.mesh.rotation.set(0, 0, 0);
+    this.activeActor.ctrl.heading = 0;
+    this.activeActor.ctrl.speed = 0;
+    this.activeActor.ctrl.velocity.set(0, 0, 0);
+    this.activeActor.ctrl.lastPos.copy(this.activeActor.mesh.position);
+    this.activeActor.ctrl.steerAngle = 0;
+    this.activeActor.ctrl.throttle = 0;
+    this.activeActor.ctrl.brake = 0;
+    return true;
+  }
+
   previewVehicle(def) {
     if (!def) return;
     this.inMenu = true;
@@ -343,7 +361,7 @@ export class Game {
   driveSelectedVehicle(def) {
     if (!def) return false;
     if (this._menuPreviewMesh) { this.scene.remove(this._menuPreviewMesh); this._menuPreviewMesh = null; }
-    const owned = (this.state.garage.vehicles || []).find(v => v && v.isOwned !== false && v.id === def.id);
+    const owned = (this.state.garage.vehicles || []).find(v => v && v.isOwned !== false && !v.isTestDrive && (def.vehicleUid ? v.vehicleUid === def.vehicleUid : v.id === def.id));
     if (owned) {
       this.state.activeVehicleUid = owned.vehicleUid;
       this.state.activeVehicleId = owned.id;
@@ -373,10 +391,11 @@ export class Game {
     return this.vehicleActors.find(a => a.def.vehicleUid === uid && !a.temp) || null;
   }
 
-  enterWorld(startInVehicle = true) {
+  enterWorld(startInVehicle = true, options = {}) {
     this.inMenu = false;
     // Never expose the on-foot placeholder on world entry. If vehicles were not spawned yet, create them now.
     if (!this.activeActor) this._spawnOwnedVehicles();
+    if (options.startGrid) this._placeActiveCarOnStartGrid();
     this.paused = false;
     // Start directly in the player's owned vehicle so the game opens as a driving game.
     this.mode = this.activeActor ? 'driving' : 'onfoot';
@@ -396,7 +415,7 @@ export class Game {
       this.camera.lookAt(this.activeActor.mesh.position.x, this.activeActor.mesh.position.y + 1.1, this.activeActor.mesh.position.z);
     }
     this.ui.showGame();
-    this.audio.resume();
+    this.audio.resume().then(() => this.audio.engineStart()).catch(() => {});
     this.audio.setVolumes(Settings.get('soundVolume'), Settings.get('musicVolume'), Settings.get('musicOn'));
     this.clock.getDelta();
     if (!this.loopRunning) {
@@ -419,6 +438,8 @@ export class Game {
       return;
     }
     this.update(dt);
+    this._shadowTick = (this._shadowTick || 0) + 1;
+    if (this.renderer.shadowMap.enabled && this._shadowTick % 3 === 0) this.renderer.shadowMap.needsUpdate = true;
     this.render();
   };
 
@@ -438,12 +459,17 @@ export class Game {
     const day = this.world.updateDayNight(dt, this.paused);
     if (day.night) {
       this.flags.night = true;
-      if (!this.headlightsOn && this.mode === 'driving') this.toggleHeadlights();
+      if (!this.headlightsOn && this.mode === 'driving' && !this._lightsUserOff) this.toggleHeadlights(false);
+    } else if (this.headlightsOn && !this._lightsUserOff && day.t > 7 && day.t < 17) {
+      this.toggleHeadlights(false);
     }
     if (this.world.weather === 'rain') this.flags.rain = true;
 
     if (input.consumeCamera()) this.cameraMode = (this.cameraMode + 1) % 4;
-    if (input.consumeHeadlights()) this.toggleHeadlights();
+    if (input.consumeHeadlights()) {
+      this._lightsUserOff = this.headlightsOn; // if currently on, user is turning off
+      this.toggleHeadlights(true);
+    }
     if (input.consumeHorn()) this.audio.beep(220, 0.28, 'square', 0.1);
 
     if (this.mode === 'driving' && this.controller) {
@@ -560,15 +586,16 @@ export class Game {
     }
   }
 
-  toggleHeadlights() {
+  toggleHeadlights(announce = true) {
     this.headlightsOn = !this.headlightsOn;
     if (!this._headlamp) {
-      this._headlamp = new THREE.SpotLight(0xfff2cc, 0, 48, Math.PI / 5, 0.4, 1);
+      this._headlamp = new THREE.SpotLight(0xfff2cc, 0, 42, Math.PI / 5, 0.45, 1);
+      this._headlamp.castShadow = false;
       this.scene.add(this._headlamp);
       this.scene.add(this._headlamp.target);
     }
-    this._headlamp.intensity = this.headlightsOn ? 2.2 : 0;
-    this.ui.toast(this.headlightsOn ? 'Headlights ON' : 'Headlights OFF');
+    this._headlamp.intensity = this.headlightsOn ? 2.0 : 0;
+    if (announce) this.ui.toast(this.headlightsOn ? 'Headlights ON' : 'Headlights OFF');
   }
 
   _tryEnter() {
@@ -1570,3 +1597,25 @@ export class Game {
 }
 
 export { VEHICLES, POIS, DISTRICTS, LANDMARKS, hasSave, levelName, xpProgress, Settings, makeRoomCode };
+
+/* CITY DRIVE — guaranteed street-car selection helper */
+(function(){
+"use strict";
+function install(){
+ const G=window.Game, C=window.CityDriveRealStreetCars;
+ if(!G||!C||G.prototype.cityDriveStreetCarInstalled) return;
+ G.prototype.cityDriveStreetCarInstalled=true;
+ G.prototype.getStreetCarSpec=function(id){return C.catalog[id]||null;};
+ G.prototype.buildStreetCar=function(id){
+   const s=C.catalog[id]; if(!s) return null;
+   return C.buildBody(s);
+ };
+ G.prototype.isStreetCar=function(id){return !!C.catalog[id];};
+}
+if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",()=>setTimeout(install,0)); else setTimeout(install,0);
+})();
+
+/* Lag safety: callers may normalize frame delta through this method. */
+Game.prototype.cityDriveSafeDelta=function(dt){
+  return window.CityDrivePerformance ? window.CityDrivePerformance.clampDelta(dt) : Math.min(0.033,Math.max(0,dt||0.016));
+};

@@ -458,7 +458,28 @@ export const VEHICLES = [
     description: 'Large city bus. Slow but earns high rewards from bus jobs.',
     seats: 40,
     isMotorcycle: false
-  }
+  },
+
+  // STREET TRAFFIC EXPANSION — fictional, real-world-inspired road cars
+  ...[
+    ['street_metro','Metro Sedan','sedan',145,6.8,62,58,1180,0xD8D8D8,0x252930],
+    ['street_exec','Executive Sedan','sedan',190,5.9,68,64,1450,0x20252A,0x11151A],
+    ['street_hatch','City Hatch','hatchback',125,7.5,64,60,1120,0xB72D2D,0x24282D],
+    ['street_family_hatch','Family Hatch','hatchback',155,6.9,66,62,1240,0xEEEEEE,0x30343A],
+    ['street_compact_suv','Compact SUV','suv',180,7.4,60,62,1520,0x8A8A82,0x20252A],
+    ['street_urban_suv','Urban SUV','suv',220,6.6,64,66,1760,0x25282C,0x111318],
+    ['street_lux_suv','Luxury SUV','suv',300,5.7,72,72,2050,0x171A1D,0x32363C],
+    ['street_mpv','Family MPV','mpv',160,7.2,56,58,1580,0xF1F1E8,0x30343A],
+    ['street_taxi','City Taxi','taxi',150,7.0,61,60,1280,0xE6C31F,0x16191D],
+    ['street_van','Delivery Van','van',175,9.2,48,52,1850,0xF4F4F4,0x30343A],
+    ['street_pickup','Street Pickup','pickup',230,7.0,56,58,1900,0xA83B2F,0x24282D],
+    ['street_offroad_pickup','Off-Road Pickup','pickup',280,6.1,60,64,2050,0x314936,0x171B1A]
+  ].map(([id,name,shape,topSpeed,acceleration,handling,braking,weight,color,secondaryColor]) => ({
+    id,name,manufacturer:'Roadline',type: shape==='suv'?VEHICLE_TYPES.SUV:(shape==='van'||shape==='pickup'?VEHICLE_TYPES.COMMERCIAL:VEHICLE_TYPES.CAR),
+    tier:VEHICLE_TIERS.BEGINNER,price:12000,topSpeed,acceleration,handling,braking,weight,grip:0.74,offroad:shape==='suv'||shape==='pickup'?55:22,
+    fuelCapacity:50,fuelConsumption:8.5,nitroCapacity:0,condition:100,mileage:0,resaleFactor:0.65,requiredLevel:1,
+    color,secondaryColor,description:'Everyday fictional street vehicle for realistic city traffic.',seats:shape==='van'?2:5,isMotorcycle:false,streetTraffic:true
+  }))
 ];
 
 export function getVehicleById(id) {
@@ -513,3 +534,25 @@ export function cloneVehicle(base, overrides = {}) {
     favorite: false
   };
 }
+
+/* Street-car catalog is loaded by streetCars.js. */
+
+/* Real street-car bridge: makes the new bodies first-class selectable vehicles. */
+(function(){
+"use strict";
+function install(){
+ const C=window.CityDriveRealStreetCars;
+ if(!C) return;
+ window.CITY_DRIVE_STREET_VEHICLES=C.catalog;
+ // Common global registries used by this project/variants.
+ const targets=[window.VEHICLES,window.vehicleDatabase,window.VEHICLE_DEFS,window.vehicleCatalog];
+ for(const target of targets){
+   if(target && typeof target==="object"){
+     for(const [id,s] of Object.entries(C.catalog)){
+       if(!target[id]) target[id]={id,...s,streetCar:true};
+     }
+   }
+ }
+}
+if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",install); else install();
+})();

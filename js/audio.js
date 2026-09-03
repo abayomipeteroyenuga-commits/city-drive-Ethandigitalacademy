@@ -84,7 +84,8 @@ export class AudioSystem {
       this.engineNoise.loop = true;
       this.engineNoiseGain = this.ctx.createGain();
       this.engineNoiseGain.gain.value = 0;
-      // Noise source retained only for compatibility; it is disconnected from the engine mix.
+      // Filtered intake/exhaust noise layer.
+      this.engineNoise.connect(this.engineFilter);
       this.engineNoise.start();
 
       // Browser autoplay policy: retry the unlock on a real interaction.
@@ -201,12 +202,27 @@ export class AudioSystem {
     this._target(this.engineOsc.frequency, targetHz, now, 0.14);
     this._target(this.engineHarmonic.frequency, targetHz * (bike ? 1.65 : 1.5), now, 0.16);
     this._target(this.engineFilter.frequency, (bike ? 620 : 430) + normalized * 520 + load * 180, now, 0.16);
-    this._target(this.engineNoiseGain.gain, 0, now, 0.08);
+    this._target(this.engineNoiseGain.gain, (bike ? 0.006 : 0.004) + normalized * 0.012 + load * 0.010, now, 0.10);
 
     // Keep the engine subtle so it never overwhelms music, UI or ambient sound.
-    const volume = (bike ? 0.010 : 0.007) + normalized * (bike ? 0.016 : 0.012) + load * (bike ? 0.018 : 0.014);
-    this._target(this.engineGain.gain, Math.min(0.055, volume), now, 0.14);
+    const volume = (bike ? 0.024 : 0.020) + normalized * (bike ? 0.035 : 0.028) + load * (bike ? 0.035 : 0.030);
+    this._target(this.engineGain.gain, Math.min(0.11, volume), now, 0.10);
     this.lastEngineWasBike = bike;
+  }
+
+  engineStart() {
+    if (!this.ctx || !this.sfxGain || this.ctx.state !== 'running') return;
+    const now = this.ctx.currentTime;
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(70, now);
+    o.frequency.exponentialRampToValueAtTime(125, now + 0.18);
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(0.10, now + 0.025);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.38);
+    o.connect(g); g.connect(this.sfxGain);
+    o.start(now); o.stop(now + 0.4);
   }
 
   beep(freq = 440, dur = 0.12, type = 'square', vol = 0.08) {

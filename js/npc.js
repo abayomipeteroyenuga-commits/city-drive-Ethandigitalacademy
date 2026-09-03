@@ -40,19 +40,21 @@ export class NPCSystem {
 
   spawn(densityT = 0.7, densityP = 0.6) {
     const colors = [0xcc2222, 0x2266cc, 0xe5e5e5, 0x20252b, 0x2e9b63, 0xc99a20, 0xeeeeee, 0x5522aa];
-    const trafficIds = ['metro_s','urban_lx','falcon_sport','titan_muscle','city_explorer','grand_terrain','cargo_king','city_van','street_hawk','phantom_rr','apex_900','road_master'];
-    const nT = Math.floor(20 * densityT);
+    const trafficIds = ['street_metro','street_exec','street_hatch','street_family_hatch','street_compact_suv','street_urban_suv','street_lux_suv','street_mpv','street_taxi','street_van','street_pickup','street_offroad_pickup','metro_s','urban_lx','city_explorer','grand_terrain','cargo_king','city_van'];
+    const nT = Math.floor(24 * Math.min(1, Math.max(0, densityT)));
     const nP = Math.floor(14 * densityP);
     for (let i = 0; i < nT; i++) {
       const mesh = trafficVehicle(trafficIds[i % trafficIds.length], colors[i % colors.length]);
       const lane = (i % 9) - 4;
       mesh.position.set(lane * 80 + (i % 2 ? 4 : -4), 0, (i * 70) % 600 - 300);
-      mesh.rotation.y = i % 2 ? 0 : Math.PI;
+      const heading = i % 2 ? Math.PI / 2 : 0;
+      mesh.rotation.y = heading;
       this.scene.add(mesh);
       this.traffic.push({
         mesh,
         speed: 12 + (i % 5) * 2,
-        heading: i % 2 ? Math.PI / 2 : 0,
+        currentSpeed: 12 + (i % 5) * 2,
+        heading,
         axis: i % 2 === 0 ? 'z' : 'x'
       });
     }
@@ -69,7 +71,8 @@ export class NPCSystem {
     }
     for (let i = 0; i < 3; i++) {
       const mesh = trafficVehicle('urban_lx', 0x1a2a88);
-      const light = new THREE.PointLight(0x2244ff, 0.4, 16);
+      const light = new THREE.PointLight(0x2244ff, 0.25, 12);
+      light.castShadow = false;
       mesh.add(light);
       mesh.position.set(60 + i * 20, 0, 40 + i * 30);
       this.scene.add(mesh);
@@ -80,20 +83,30 @@ export class NPCSystem {
   update(dt, playerPos, playerSpeed, flags) {
     // traffic along grid axes
     for (const t of this.traffic) {
+      const dx = playerPos.x - t.mesh.position.x;
+      const dz = playerPos.z - t.mesh.position.z;
+      const far = dx * dx + dz * dz > 220 * 220;
+      t.mesh.visible = !far;
+      if (far) continue;
       const f = new THREE.Vector3(Math.sin(t.heading), 0, Math.cos(t.heading));
       const stopped = this.world?.shouldStopTraffic?.(t.mesh.position, t.axis, t.heading);
       const targetSpeed = stopped ? 0 : t.speed;
-      const step = THREE.MathUtils.lerp(0, targetSpeed, Math.min(1, dt * 4));
-      t.currentSpeed = step;
-      t.mesh.position.addScaledVector(f, step * dt);
+      t.currentSpeed = THREE.MathUtils.damp(t.currentSpeed || t.speed, targetSpeed, stopped ? 8 : 3, dt);
+      t.mesh.position.addScaledVector(f, t.currentSpeed * dt);
+      t.mesh.rotation.y = t.heading;
       if (t.mesh.position.z > 360 || t.mesh.position.z < -360 || t.mesh.position.x > 360 || t.mesh.position.x < -360) {
-        t.heading += Math.PI;
+        t.heading += Math.PI / 2;
         t.mesh.rotation.y = t.heading;
+        t.axis = t.axis === 'z' ? 'x' : 'z';
         t.mesh.position.x = Math.max(-350, Math.min(350, t.mesh.position.x));
         t.mesh.position.z = Math.max(-350, Math.min(350, t.mesh.position.z));
       }
     }
     for (const p of this.peds) {
+      const pdx = playerPos.x - p.mesh.position.x;
+      const pdz = playerPos.z - p.mesh.position.z;
+      if (pdx * pdx + pdz * pdz > 160 * 160) { p.mesh.visible = false; continue; }
+      p.mesh.visible = true;
       p.phase += dt * p.speed * 3.2;
       p.mesh.position.addScaledVector(p.dir, p.speed * dt);
       const parts = p.mesh.userData.walkParts;

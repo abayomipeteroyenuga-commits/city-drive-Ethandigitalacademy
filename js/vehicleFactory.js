@@ -38,13 +38,38 @@ export function createVehicleMesh(def){
   const s=def.customization?.secondaryColor ?? def.secondaryColor;
   if(def.isMotorcycle) buildMotorcycle(g,def,c,s);
   else if(def.id==='metro_bus') buildBus(g,def,c,s);
-  else if(def.id==='city_van') buildVan(g,def,c,s);
-  else if(def.id==='cargo_king') buildPickup(g,def,c,s);
+  else if(def.id==='city_van'||def.id==='street_van'||def.id==='delivery_van') buildVan(g,def,c,s);
+  else if(def.id==='cargo_king'||def.id==='street_pickup'||def.id==='street_offroad_pickup'||def.id==='pickup'||def.id==='offroad_pickup') buildPickup(g,def,c,s);
+  else if(def.id==='street_hatch'||def.id==='street_family_hatch'||def.id==='city_hatch'||def.id==='family_hatch') buildHatch(g,def,c,s);
+  else if(def.id==='street_mpv'||def.id==='family_mpv') buildMpv(g,def,c,s);
+  else if(def.id==='street_taxi'||def.id==='city_taxi') buildTaxi(g,def,c,s);
+  else if(def.id==='street_metro'||def.id==='street_exec'||def.id==='metro_s'||def.id==='metro_sedan'||def.id==='urban_lx'||def.id==='executive_sedan') buildSedan(g,def,c,s);
+  else if(def.id==='street_compact_suv'||def.id==='street_urban_suv'||def.id==='street_lux_suv'||def.id==='compact_suv'||def.id==='urban_suv'||def.id==='luxury_suv') buildSuv(g,def,c,s);
   else if(def.type==='suv') buildSuv(g,def,c,s);
   else if(def.id==='vortex_x'||def.id==='falcon_sport') buildSport(g,def,c,s);
   else if(def.id==='titan_muscle') buildMuscle(g,def,c,s);
   else buildSedan(g,def,c,s);
   return g;
+}
+
+function buildHatch(g,def,c,s){
+  const w=1.78,l=3.95;
+  g.add(mesh(new THREE.SphereGeometry(1,20,12),mat(c,.31,.48),0,.53,0)).scale.set(w*.62,.29,l*.62);
+  g.add(box(w*.94,.32,2.0,s,0,.77,-.18,.25,.55));
+  g.add(box(w*.88,.11,.82,c,0,.60,1.28,.25,.55));
+  windows(g,w,l,.96); lights(g,w,l); mirrors(g,w,.02); wheels4(g,w,l,.33,.33); aero(g,w,l,c,s,false);
+}
+function buildMpv(g,def,c,s){
+  const w=2.0,l=4.75;
+  g.add(box(w,.64,l,c,0,.72,0,.32,.45));
+  g.add(box(w*.90,.72,2.35,s,0,1.12,-.20,.30,.45));
+  g.add(box(w*.84,.10,.95,c,0,.84,1.45,.22,.55));
+  windows(g,w,l,1.18); lights(g,w,l); mirrors(g,w,.08); wheels4(g,w,l,.37,.39); aero(g,w,l,c,s,false);
+}
+function buildTaxi(g,def,c,s){
+  buildSedan(g,def,c,s);
+  g.add(box(.55,.10,.34,0xF4F4F4,0,1.35,.05,.12,.2));
+  g.add(box(.44,.035,.12,0x222222,0,1.405,.05,.08,.2));
 }
 
 function buildSedan(g,def,c,s){

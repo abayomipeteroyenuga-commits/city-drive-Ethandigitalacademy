@@ -20,10 +20,10 @@ async function boot() {
   ui.hideLoading();
   wireMenu();
   wireMainMenuKeys();
-  // The first page is the vehicle showroom: see a real 3D ride, choose it, and drive.
+  // DIRECT RACING START: boot straight into the selected car on an open-road starting grid.
+  // Vehicle selection remains available later from the garage; it is not the first screen.
   const first = ensureGame();
-  first.enterWorld(true);
-  ui.openVehicleSelect(first);
+  if (window.CityDriveWowMenu) window.CityDriveWowMenu.open(); else first.enterWorld(true, { startGrid: true });
 }
 
 function wireMainMenuKeys() {
@@ -63,13 +63,13 @@ function wireMenu() {
     if (hasSave() && !confirm('Start a NEW GAME? This resets saved progress.')) return;
     const g = ensureGame();
     g.startNew(name);
-    ui.openVehicleSelect(g);
+    g.enterWorld(true, { startGrid: true });
   };
   document.getElementById('btn-continue').onclick = () => {
     if (!hasSave()) { ui.toast('No save found'); return; }
     const g = ensureGame();
     g.continueGame();
-    ui.openVehicleSelect(g);
+    g.enterWorld(true, { startGrid: true });
   };
 }
 
@@ -109,3 +109,24 @@ boot().catch((err) => {
   if (text) text.innerHTML = 'CITY DRIVE could not start.<br><small>' + String(err?.message || err).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</small>';
   if (box) box.classList.remove('hidden');
 });
+
+
+/* Driving audio hooks added by audit patch */
+(function(){
+  function audioTick(){
+    try {
+      if (!window.DriveAudio) return;
+      const v = window.vehicle || window.car || window.playerCar || window.player;
+      let speed = 0, throttle = 0, skid = false;
+      if (v) {
+        speed = Number(v.speed ?? v.velocity?.length?.() ?? 0) || 0;
+        throttle = Number(v.throttle ?? v.acceleration ?? 0) || 0;
+        skid = !!(v.skidding ?? v.isDrifting ?? v.handbrake);
+      }
+      window.DriveAudio.update(speed, throttle, skid);
+    } catch(e) {}
+    requestAnimationFrame(audioTick);
+  }
+  audioTick();
+  window.addEventListener('keydown', e => { if (e.code === 'Space' || e.key.toLowerCase() === 'h') window.DriveAudio && window.DriveAudio.horn(); });
+})();

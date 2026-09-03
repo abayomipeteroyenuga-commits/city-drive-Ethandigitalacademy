@@ -29091,15 +29091,11 @@ class WebGLRenderer {
 
 			event.preventDefault();
 
-			console.log( 'THREE.WebGLRenderer: Context Lost.' );
-
 			_isContextLost = true;
 
 		}
 
 		function onContextRestore( /* event */ ) {
-
-			console.log( 'THREE.WebGLRenderer: Context Restored.' );
 
 			_isContextLost = false;
 
@@ -31515,8 +31511,6 @@ class InterleavedBufferAttribute {
 
 		if ( data === undefined ) {
 
-			console.log( 'THREE.InterleavedBufferAttribute.clone(): Cloning an interleaved buffer attribute will de-interleave buffer data.' );
-
 			const array = [];
 
 			for ( let i = 0; i < this.count; i ++ ) {
@@ -31556,8 +31550,6 @@ class InterleavedBufferAttribute {
 	toJSON( data ) {
 
 		if ( data === undefined ) {
-
-			console.log( 'THREE.InterleavedBufferAttribute.toJSON(): Serializing an interleaved buffer attribute will de-interleave buffer data.' );
 
 			const array = [];
 

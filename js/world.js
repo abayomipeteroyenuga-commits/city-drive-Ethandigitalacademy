@@ -217,6 +217,17 @@ export class World {
       addRoad(i * 80, 0, 14, 720);
       addRoad(0, i * 80, 14, 720, Math.PI / 2);
     }
+    // RACING START GRID — an open-road starting area, away from the garage.
+    const gridZ = -120;
+    const gridLine = new THREE.Mesh(new THREE.BoxGeometry(14, 0.018, 0.32), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    gridLine.position.set(0, 0.105, gridZ); this.scene.add(gridLine);
+    for (const laneX of [-3.35, 3.35]) {
+      const box = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.018, 10), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.18 }));
+      box.position.set(laneX, 0.106, gridZ - 6); this.scene.add(box);
+    }
+    const startText = new THREE.Mesh(new THREE.PlaneGeometry(7, 2.1), new THREE.MeshBasicMaterial({ color: 0x00d4ff, transparent: true, opacity: 0.18, side: THREE.DoubleSide }));
+    startText.rotation.x = -Math.PI / 2; startText.position.set(0, 0.11, gridZ - 12); this.scene.add(startText);
+
     // highway ring
     addRoad(0, -280, 18, 600, Math.PI / 2);
     addRoad(-280, 0, 18, 600);
@@ -224,11 +235,11 @@ export class World {
     // Lane markings and pedestrian-scale street lighting make the city read as a real road network.
     const dashMat = new THREE.MeshBasicMaterial({ color: 0xf5e6a6 });
     for (let i = -4; i <= 4; i++) {
-      for (let z = -340; z < 340; z += 24) {
-        const d = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.012, 8), dashMat); d.position.set(i*80,0.085,z); this.scene.add(d);
+      for (let z = -340; z < 340; z += 48) {
+        const d = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.012, 10), dashMat); d.position.set(i*80,0.085,z); this.scene.add(d);
       }
-      for (let x = -340; x < 340; x += 24) {
-        const d = new THREE.Mesh(new THREE.BoxGeometry(8,0.012,0.18), dashMat); d.position.set(x,0.085,i*80); this.scene.add(d);
+      for (let x = -340; x < 340; x += 48) {
+        const d = new THREE.Mesh(new THREE.BoxGeometry(10,0.012,0.18), dashMat); d.position.set(x,0.085,i*80); this.scene.add(d);
       }
     }
     for (const [x,z] of [[-8,-8],[72,-8],[-8,72],[72,72],[152,72],[152,-8]]) {
@@ -429,6 +440,9 @@ export class World {
   resolveVehicleCollision(veh) {
     const p = veh.mesh.position;
     for (const b of this.buildings) {
+      const adx = Math.abs(p.x - b.x);
+      const adz = Math.abs(p.z - b.z);
+      if (adx > b.w / 2 + 8 || adz > b.d / 2 + 8) continue;
       const hx = b.w / 2 + 1.2;
       const hz = b.d / 2 + 1.2;
       if (Math.abs(p.x - b.x) < hx && Math.abs(p.z - b.z) < hz) {

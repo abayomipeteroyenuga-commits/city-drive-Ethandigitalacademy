@@ -768,3 +768,96 @@ export class UI {
 }
 
 
+
+
+
+/* ============================================================
+   CITY DRIVE - HOW TO PLAY MENU
+   ============================================================ */
+(function(){
+  "use strict";
+  function install(){
+    if(document.getElementById("cityDriveHowToPlay")) return;
+
+    const style=document.createElement("style");
+    style.id="cityDriveHowToPlayStyle";
+    style.textContent=`
+      #cityDriveHowToPlay{position:fixed;inset:0;z-index:99999;display:none;
+        align-items:center;justify-content:center;background:rgba(0,0,0,.78);
+        font-family:Arial,sans-serif;padding:20px;box-sizing:border-box}
+      #cityDriveHowToPlay .cdhtp-box{width:min(680px,96vw);max-height:88vh;overflow:auto;
+        background:#111923;border:2px solid rgba(255,255,255,.2);border-radius:18px;
+        padding:28px;color:#fff;box-shadow:0 20px 60px rgba(0,0,0,.55)}
+      #cityDriveHowToPlay h2{margin:0 0 18px;font-size:30px}
+      #cityDriveHowToPlay .cdhtp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+      #cityDriveHowToPlay .cdhtp-item{padding:12px 14px;background:rgba(255,255,255,.08);
+        border-radius:10px}
+      #cityDriveHowToPlay kbd{display:inline-block;padding:3px 8px;border-radius:6px;
+        background:#fff;color:#111;font-weight:700;margin-right:5px}
+      #cityDriveHowToPlay .cdhtp-close{margin-top:20px;width:100%;padding:13px;border:0;
+        border-radius:10px;font-size:16px;font-weight:700;cursor:pointer}
+      @media(max-width:560px){#cityDriveHowToPlay .cdhtp-grid{grid-template-columns:1fr}}
+    `;
+    document.head.appendChild(style);
+
+    const modal=document.createElement("div");
+    modal.id="cityDriveHowToPlay";
+    modal.innerHTML=`
+      <div class="cdhtp-box" role="dialog" aria-modal="true" aria-label="How to Play">
+        <h2>🏁 How to Play</h2>
+        <div class="cdhtp-grid">
+          <div class="cdhtp-item"><kbd>W</kbd><kbd>↑</kbd> Accelerate</div>
+          <div class="cdhtp-item"><kbd>S</kbd><kbd>↓</kbd> Brake / Reverse</div>
+          <div class="cdhtp-item"><kbd>A</kbd><kbd>←</kbd> Turn Left</div>
+          <div class="cdhtp-item"><kbd>D</kbd><kbd>→</kbd> Turn Right</div>
+          <div class="cdhtp-item"><kbd>SPACE</kbd> Handbrake / Drift</div>
+          <div class="cdhtp-item"><kbd>SPACE</kbd> + <kbd>A/D</kbd> Sharp 360° Spin</div>
+        </div>
+        <div class="cdhtp-item" style="margin-top:10px">
+          <strong>🎮 Goal:</strong> Drive through the city, complete missions and checkpoints,
+          earn rewards, unlock vehicles and improve your driving skills.
+        </div>
+        <div class="cdhtp-item" style="margin-top:10px">
+          <strong>💡 Tip:</strong> Start on the open road, build speed, then use the handbrake
+          with left or right steering for sharp turns and spins.
+        </div>
+        <button class="cdhtp-close" type="button">BACK TO MENU</button>
+      </div>`;
+    document.body.appendChild(modal);
+
+    const close=()=>modal.style.display="none";
+    modal.querySelector(".cdhtp-close").addEventListener("click",close);
+    modal.addEventListener("click",e=>{if(e.target===modal)close();});
+    document.addEventListener("keydown",e=>{if(e.key==="Escape")close();});
+
+    // Add a How To Play button to common menu containers.
+    const candidates=[
+      "#mainMenu",".main-menu","#menu",".menu",".menu-buttons",
+      "#startMenu",".start-menu",".menu-container"
+    ];
+    let container=null;
+    for(const s of candidates){
+      container=document.querySelector(s);
+      if(container) break;
+    }
+    if(!container) return;
+
+    const btn=document.createElement("button");
+    btn.type="button";
+    btn.id="cityDriveHowToPlayBtn";
+    btn.textContent="HOW TO PLAY";
+    btn.style.cssText="margin:8px;padding:12px 22px;border-radius:10px;border:0;cursor:pointer;font-weight:700;font-size:15px;";
+    btn.addEventListener("click",()=>modal.style.display="flex");
+    container.appendChild(btn);
+  }
+
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",()=>setTimeout(install,300));
+  else setTimeout(install,300);
+})();
+
+
+/* Street-car UI data source */
+window.CityDriveStreetCarOptions=function(){
+ const C=window.CityDriveRealStreetCars;
+ return C?Object.entries(C.catalog).map(([id,s])=>({id,...s})):[]; 
+};

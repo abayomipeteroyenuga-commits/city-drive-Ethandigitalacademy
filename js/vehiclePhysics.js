@@ -17,7 +17,7 @@ export class VehicleController {
     this.reverse = false;
     this.handbrake = false;
     this.nitro = false;
-    this.nitroAmount = def.nitroCapacity || 0;
+    this.nitroAmount = def.currentNitro ?? (def.nitroCapacity || 0);
     this.onGround = true;
     this.driftFactor = 0;
     this.gear = 'P';
@@ -78,6 +78,7 @@ export class VehicleController {
     if (this.nitro && this.throttle) {
       force += st.accel * 1.55;
       this.nitroAmount = Math.max(0, this.nitroAmount - dt * 22);
+      this.def.currentNitro = this.nitroAmount;
     } else if (this.throttle) {
       force += st.accel;
     }
@@ -122,7 +123,6 @@ export class VehicleController {
       const targetLean = -this.steerAngle * Math.min(1, Math.abs(this.speed) / 8) * 0.72;
       this.lean = THREE.MathUtils.damp(this.lean, targetLean, 10, dt);
       this.mesh.rotation.z = this.lean;
-      this.mesh.position.y += Math.abs(this.lean) * 0.04;
     } else {
       const bob = Math.sin(performance.now() * 0.008 + this.speed) * Math.min(0.06, Math.abs(this.speed) * 0.004);
       this.mesh.rotation.z = THREE.MathUtils.damp(this.mesh.rotation.z, -this.steerAngle * 0.1, 8, dt);
@@ -170,5 +170,18 @@ export class VehicleController {
 
   refillNitro() {
     this.nitroAmount = this.def.nitroCapacity + ((this.def.upgrades?.nitro || 0) * 15);
+    this.def.currentNitro = this.nitroAmount;
   }
 }
+
+
+
+/* CITY DRIVE PERFORMANCE PATCH
+   Supplies a safe frame delta for physics systems without creating a second
+   per-frame physics loop. */
+(function(){
+  "use strict";
+  const MAX_DT=1/30;
+  let last=performance.now();
+  window.CityDriveGetDelta=function(now){var d=(now-(window.__cityDriveLastFrame||now))/1000;window.__cityDriveLastFrame=now;return Math.min(0.033,Math.max(0,d||0));};
+})();;

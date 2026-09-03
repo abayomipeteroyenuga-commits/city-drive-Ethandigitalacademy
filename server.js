@@ -40,7 +40,7 @@ async function listenFirstAvailable() {
         server.listen(port, '127.0.0.1');
       });
       fs.writeFileSync(path.join(root, 'server-ready.txt'), `READY http://127.0.0.1:${port}/`);
-      console.log(`CITY DRIVE offline server: http://127.0.0.1:${port}/`);
+
       const cleanup = () => { try { fs.unlinkSync(path.join(root, 'server-ready.txt')); } catch {} server.close(() => process.exit(0)); };
       process.on('SIGINT', cleanup); process.on('SIGTERM', cleanup);
       return;
