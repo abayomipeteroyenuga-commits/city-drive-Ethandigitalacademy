@@ -275,7 +275,7 @@ export class UI {
         tracker.style.setProperty('--tracker-color', color);
         this.$('tracker-label').textContent = level ? `LEVEL ${level} DESTINATION` : 'DESTINATION';
         this.$('tracker-name').textContent = `YOU ARE GOING TO: ${dest.name || mission.name || 'DESTINATION'}`;
-        this.$('tracker-distance').textContent = `${(d / 10).toFixed(1)} KM AWAY`;
+        this.$('tracker-distance').textContent = `${(d / 100).toFixed(1)} KM AWAY`;
         const heading = game.controller?.mesh?.rotation?.y || 0;
         const targetAngle = Math.atan2(Number(dest.x)-p.x, Number(dest.z)-p.z);
         let relative = (targetAngle - heading) * 180 / Math.PI;
@@ -301,13 +301,11 @@ export class UI {
   }
 
   drawMinimap(game) {
+    const now = performance.now();
+    if (this._lastMinimapDraw && now - this._lastMinimapDraw < 66) return;
+    this._lastMinimapDraw = now;
     const c = this.$('minimap');
     if (!c) return;
-    // The minimap is visual-only; update it at ~15 FPS instead of every render frame
-    // to reduce 2D canvas work on phones/tablets without affecting gameplay.
-    const now = performance.now();
-    if (this._minimapLast && now - this._minimapLast < 66) return;
-    this._minimapLast = now;
     const ctx = c.getContext('2d');
     const w = c.width, h = c.height;
     ctx.fillStyle = '#122018';

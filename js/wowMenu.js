@@ -110,7 +110,7 @@ function getCars(){
 function openVehicleSelection(){
  css();
  var old=document.getElementById("cityWowMenu"); if(old) old.remove();
- var cars=getCars().filter(function(c){ return c.fourWheels !== false && c.isMotorcycle !== true; });
+ var cars=getCars();
  var existingGame=window.game||window.firstGame||window.cityDriveGame;
  var campaignLevel=Math.max(1,Math.min(20,Number(existingGame?.state?.player?.campaignLevel)||1));
  // Always use the authoritative vehicle database and keep the required catalog at 15.

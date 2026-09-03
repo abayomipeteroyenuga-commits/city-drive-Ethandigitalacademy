@@ -240,51 +240,45 @@
 .daily-challenge-card.daily-done{border-color:rgba(0,255,157,.45)}
 .daily-badge{font-size:.62rem;font-weight:900;letter-spacing:.15em;color:#ffcc33}.daily-challenge-card h2{margin:5px 0;font-size:1.2rem}.daily-progress{font-size:1rem;font-weight:900;color:#00ff9d;margin:8px 0}
 
-/* LIVE DESTINATION TRACKER */
-#destination-tracker{position:fixed;top:72px;right:24px;left:auto;transform:none;z-index:30;display:flex;align-items:center;gap:12px;width:min(430px,calc(50vw - 42px));min-width:280px;max-width:430px;padding:10px 16px;border:1px solid var(--tracker-color,#00d4ff);border-left:5px solid var(--tracker-color,#00d4ff);border-radius:12px;background:rgba(4,10,16,.9);box-shadow:0 0 22px color-mix(in srgb,var(--tracker-color,#00d4ff) 35%,transparent);backdrop-filter:blur(8px);transition:.2s}
+/* LIVE DESTINATION TRACKER — square, self-contained and always separated from minimap */
+#minimap-container{z-index:24;box-sizing:border-box}
+#destination-tracker{position:fixed;top:208px;right:18px;left:auto;transform:none;z-index:26;display:grid;grid-template-rows:44px 1fr;align-items:center;justify-items:center;gap:7px;width:180px;height:180px;min-width:180px;max-width:180px;box-sizing:border-box;padding:12px;border:1px solid var(--tracker-color,#00d4ff);border-top:4px solid var(--tracker-color,#00d4ff);border-radius:14px;background:rgba(4,10,16,.94);box-shadow:0 0 22px color-mix(in srgb,var(--tracker-color,#00d4ff) 30%,transparent);backdrop-filter:blur(8px);overflow:hidden}
 #destination-tracker.hidden{display:none}
-#tracker-arrow-wrap{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.06);flex:0 0 auto}
-#tracker-arrow{display:block;color:var(--tracker-color,#00d4ff);font-size:23px;text-shadow:0 0 10px var(--tracker-color,#00d4ff);transition:transform .15s linear}
-.tracker-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
-#tracker-label{font-size:10px;font-weight:800;letter-spacing:1.8px;color:var(--tracker-color,#00d4ff)}
-#tracker-name{font-size:14px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#tracker-distance{font-size:11px;color:#9db0bd}
-@media(max-width:600px){#destination-tracker{top:72px;min-width:240px;padding:8px 11px}.tracker-copy #tracker-name{font-size:12px}}
+#tracker-arrow-wrap{width:42px;height:42px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.06);flex:0 0 auto}
+#tracker-arrow{display:block;color:var(--tracker-color,#00d4ff);font-size:25px;line-height:1;text-shadow:0 0 10px var(--tracker-color,#00d4ff);transition:transform .15s linear}
+.tracker-copy{display:grid;grid-template-rows:auto minmax(0,1fr) auto;align-items:center;justify-items:center;gap:4px;min-width:0;width:100%;height:100%;text-align:center;overflow:hidden}
+#tracker-label{font-size:9px;line-height:1.1;font-weight:900;letter-spacing:1.3px;color:var(--tracker-color,#00d4ff);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+#tracker-name{width:100%;max-width:100%;font-size:13px;line-height:1.22;color:#fff;white-space:normal;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+#tracker-distance{font-size:11px;line-height:1.1;color:#9db0bd;white-space:nowrap}
 
-#mission-timer{display:inline-flex;align-items:center;justify-content:center;margin:8px 0 6px;padding:5px 10px;border:1px solid rgba(255,204,51,.35);border-radius:7px;background:rgba(255,204,51,.08);color:#ffcc33;font-size:12px;font-weight:950;letter-spacing:.12em}#mission-timer.urgent{color:#ff5a5a;border-color:rgba(255,90,90,.6);background:rgba(255,90,90,.1);animation:missionTimerPulse .8s ease-in-out infinite alternate}@keyframes missionTimerPulse{from{opacity:.72}to{opacity:1}}
-@media(max-width:900px){#mission-panel{left:12px;width:calc(50vw - 18px);min-width:0}#destination-tracker{right:12px;width:calc(50vw - 18px);min-width:0}}
-@media(max-width:600px){#mission-panel{top:64px;left:10px;width:calc(100vw - 20px);min-width:0;padding:9px 12px}#destination-tracker{top:176px;right:10px;width:calc(100vw - 20px);min-width:0;max-width:none;padding:8px 11px}.tracker-copy #tracker-name{font-size:12px}}
-
-
-/* FINAL RESPONSIVE HUD PASS — laptop, tablet and mobile safe areas */
-#top-bar{z-index:45;max-width:calc(100vw - 360px)}
-@media (max-width:1100px){
-  #top-bar{gap:14px;padding:7px 15px;max-width:calc(100vw - 320px)}
-  #minimap-container{width:150px;height:150px;}
+@media(max-width:1100px){
+  #minimap-container{width:150px;height:150px}
+  #destination-tracker{top:176px;right:12px;width:150px;height:150px;min-width:150px;max-width:150px;padding:10px;grid-template-rows:36px 1fr}
+  #tracker-arrow-wrap{width:36px;height:36px}
+  #tracker-arrow{font-size:22px}
 }
-@media (max-width:760px){
-  #top-bar{top:max(8px,env(safe-area-inset-top));gap:9px;padding:6px 10px;max-width:calc(100vw - 220px);font-size:.78rem}
-  #money-display{font-size:.9rem}.wanted-stars{font-size:.8rem}#level-display{font-size:.75rem}
+@media(max-width:760px){
   #minimap-container{top:max(8px,env(safe-area-inset-top));right:8px;width:108px;height:108px}
-  #mission-panel{top:calc(max(8px,env(safe-area-inset-top)) + 50px);}
-  #destination-tracker{top:calc(max(8px,env(safe-area-inset-top)) + 160px);}
+  #destination-tracker{top:calc(max(8px,env(safe-area-inset-top)) + 116px);right:8px;width:108px;height:108px;min-width:108px;max-width:108px;padding:6px;grid-template-rows:29px 1fr;gap:3px;border-radius:11px}
+  #tracker-arrow-wrap{width:28px;height:28px}
+  #tracker-arrow{font-size:18px}
+  #tracker-label{font-size:7px;letter-spacing:.8px}
+  #tracker-name{font-size:9.5px;line-height:1.12;-webkit-line-clamp:3}
+  #tracker-distance{font-size:8.5px}
 }
-@media (max-width:480px){
-  #top-bar{max-width:calc(100vw - 128px);gap:6px;padding:5px 8px}
-  #money-display{font-size:.78rem}#wanted-stars{min-width:35px;font-size:.72rem;letter-spacing:1px}#level-display{font-size:.68rem}
+@media(max-width:480px){
   #minimap-container{width:92px;height:92px;top:max(6px,env(safe-area-inset-top));right:6px}
-  #mission-panel{top:112px!important;left:7px!important;width:calc(100vw - 14px)!important;padding:8px 10px!important}
-  #destination-tracker{top:222px!important;left:7px!important;right:auto!important;width:calc(100vw - 14px)!important}
-  #mission-objective{font-size:.86rem}#mission-distance{font-size:.7rem}#mission-help{font-size:.58rem}
+  #destination-tracker{top:calc(max(6px,env(safe-area-inset-top)) + 100px);right:6px;width:92px;height:92px;min-width:92px;max-width:92px;padding:5px;grid-template-rows:25px 1fr;gap:2px}
+  #tracker-arrow-wrap{width:24px;height:24px}
+  #tracker-arrow{font-size:15px}
+  #tracker-label{font-size:6.5px;letter-spacing:.55px}
+  #tracker-name{font-size:8.5px;line-height:1.08}
+  #tracker-distance{font-size:7.5px}
 }
-@media (max-height:520px) and (orientation:landscape){
-  #top-bar{top:5px;padding:4px 9px}
+@media(max-height:520px) and (orientation:landscape){
   #minimap-container{width:90px;height:90px;top:5px;right:5px}
-  #mission-panel{top:58px!important;left:8px!important;width:42vw!important;padding:6px 9px!important}
-  #destination-tracker{top:58px!important;right:8px!important;left:auto!important;width:42vw!important;min-width:0;padding:6px 9px!important}
-  #mobile-controls .ctrl-btn{margin-bottom:env(safe-area-inset-bottom)}
+  #destination-tracker{top:100px;right:5px;width:90px;height:90px;min-width:90px;max-width:90px;padding:5px;grid-template-rows:24px 1fr}
 }
-
 
 /* EMOTE SYSTEM */
 #emote-wheel{position:fixed;inset:0;z-index:90;display:grid;place-items:center;background:rgba(2,7,12,.48);backdrop-filter:blur(6px);padding:20px}

@@ -143,7 +143,10 @@ boot().catch((err) => {
 
 /* Driving audio hooks added by audit patch */
 (function(){
-  function audioTick(){
+  let lastAudioTick = 0;
+  function audioTick(now){
+    if (now - lastAudioTick < 33) { requestAnimationFrame(audioTick); return; }
+    lastAudioTick = now;
     try {
       if (!window.DriveAudio) return;
       const v = window.vehicle || window.car || window.playerCar || window.player;
@@ -157,6 +160,6 @@ boot().catch((err) => {
     } catch(e) {}
     requestAnimationFrame(audioTick);
   }
-  audioTick();
+  requestAnimationFrame(audioTick);
   window.addEventListener('keydown', e => { if (e.code === 'Space' || e.key.toLowerCase() === 'h') window.DriveAudio && window.DriveAudio.horn(); });
 })();

@@ -84,6 +84,8 @@ export class NPCSystem {
     this.wanted = 0;
     this.wantedCooldown = 0;
     this._collisionTmp = new THREE.Vector3();
+    this._trafficForward = new THREE.Vector3();
+    this._policeToPlayer = new THREE.Vector3();
   }
 
   spawn(densityT = 0.7, densityP = 0.6) {
@@ -181,7 +183,7 @@ export class NPCSystem {
       const far = dx * dx + dz * dz > 220 * 220;
       t.mesh.visible = !far;
       if (far) continue;
-      const f = new THREE.Vector3(Math.sin(t.heading), 0, Math.cos(t.heading));
+      const f = this._trafficForward.set(Math.sin(t.heading), 0, Math.cos(t.heading));
       const stopped = this.world?.shouldStopTraffic?.(t.mesh.position, t.axis, t.heading);
       const blocked = t.blocked > 0;
       t.blocked = Math.max(0, t.blocked - dt);
@@ -236,7 +238,7 @@ export class NPCSystem {
     const chasing = this.wanted >= 2;
     for (const cop of this.police) {
       if (chasing) {
-        const to = playerPos.clone().sub(cop.mesh.position); to.y = 0;
+        const to = this._policeToPlayer.copy(playerPos).sub(cop.mesh.position); to.y = 0;
         const dist = to.length();
         if (dist > 1) {
           to.normalize();

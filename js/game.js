@@ -38,10 +38,8 @@ export class Game {
     this.destinationTrackerColor = 0x00d4ff;
     // Three AI rivals accompany every campaign level and are capped before the finish.
     this._campaignRivals = [];
-    this._emoteScreenPoint = new THREE.Vector3();
     this.emoteState = { name: '', emoji: '', until: 0, pulse: 0 };
-    if (this._emoteBubble) { this._emoteBubble.remove(); this._emoteBubble = null; }
-    this._emoteScreenPoint = new THREE.Vector3();
+    this._emoteBubble = null;
     this.levelCelebration = null;
 
     const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
@@ -1404,9 +1402,8 @@ export class Game {
   _clearCampaignRivals() {
     (this._campaignRivals || []).forEach(r => { this.scene.remove(r.mesh); this._disposeObject3D(r.mesh); });
     this._campaignRivals = [];
-    this._emoteScreenPoint = new THREE.Vector3();
     this.emoteState = { name: '', emoji: '', until: 0, pulse: 0 };
-    if (this._emoteBubble) { this._emoteBubble.remove(); this._emoteBubble = null; }
+    this._emoteBubble = null;
   }
 
   _spawnRaceAI(checkpoints) {
@@ -1835,8 +1832,7 @@ export class Game {
     this.emoteState.pulse += dt * 8;
     const target = this.mode === 'driving' && this.controller ? this.controller.mesh : this.playerMesh;
     if (!target || !bubble) return;
-    const p = this._emoteScreenPoint || (this._emoteScreenPoint = new THREE.Vector3());
-    p.copy(target.position);
+    const p = target.position.clone();
     p.y += this.mode === 'driving' ? 2.8 : 2.25;
     p.project(this.camera);
     const x = (p.x * .5 + .5) * innerWidth;
