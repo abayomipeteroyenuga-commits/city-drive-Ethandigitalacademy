@@ -172,7 +172,11 @@ export class UI {
       this.$('mission-title').textContent = game.activeMission.name;
       if (game.activeMission.campaign) {
         const cm = game.activeMission.campaign;
-        this.$('mission-objective').textContent = `LEVEL ${cm.level}: ${cm.objective}`;
+        const stage = game.activeMission.stage;
+        const isStagedJob = game.activeMission.campaignType === 'job' && game.activeMission.stages;
+        this.$('mission-objective').textContent = isStagedJob
+          ? `LEVEL ${cm.level}: ${stage === 0 ? 'PICK UP THE PACKAGE / PASSENGER' : 'DELIVER THE PACKAGE / PASSENGER'}`
+          : `LEVEL ${cm.level}: ${cm.objective}`;
         if (game.activeMission.dest) {
           const p = game.controller?.mesh.position || game.playerMesh.position;
           const d = Math.hypot(p.x - game.activeMission.dest.x, p.z - game.activeMission.dest.z);
@@ -180,7 +184,9 @@ export class UI {
         } else {
           this.$('mission-distance').textContent = `REWARD: ${game.economy.format(cm.reward)} + ${cm.xp} XP`;
         }
-        this.$('mission-help').textContent = `CAMPAIGN LEVEL ${cm.level}/${CAMPAIGN_MISSIONS.length} • COMPLETE THIS OBJECTIVE TO UNLOCK LEVEL ${Math.min(cm.level + 1, CAMPAIGN_MISSIONS.length)}`;
+        this.$('mission-help').textContent = isStagedJob
+          ? `CAMPAIGN LEVEL ${cm.level}/${CAMPAIGN_MISSIONS.length} • STEP ${stage === 0 ? '1/2 — PICKUP' : '2/2 — DELIVERY'} • FOLLOW THE COLORED ROUTE`
+          : `CAMPAIGN LEVEL ${cm.level}/${CAMPAIGN_MISSIONS.length} • COMPLETE THIS OBJECTIVE TO UNLOCK LEVEL ${Math.min(cm.level + 1, CAMPAIGN_MISSIONS.length)}`;
         const rivals = game._campaignRivals || [];
         if (rivals.length) {
           const order = [...rivals].sort((a,b) => (b.progress || 0) - (a.progress || 0));
@@ -196,10 +202,10 @@ export class UI {
         this.$('mission-distance').textContent = 'DISTANCE: ' + (d / 10).toFixed(1) + ' km';
         this.$('mission-help').textContent = 'STEP 1/1 • FOLLOW THE GOLD MARKER • ARRIVE SAFELY';
       } else {
-        const total = game.activeMission.checkpoints.length;
-        const current = Math.min(game.activeMission.index + 1, total);
+        const total = game.activeMission.checkpoints?.length || 0;
+        const current = total ? Math.min(game.activeMission.index + 1, total) : 0;
         this.$('mission-objective').textContent = `🏁 CHECKPOINT ${current} OF ${total}`;
-        this.$('mission-distance').textContent = 'FOLLOW THE GREEN CHECKPOINTS';
+        this.$('mission-distance').textContent = 'FOLLOW THE COLORED CHECKPOINTS';
         this.$('mission-help').textContent = `RACE • PASS CHECKPOINT ${current} • FINISH TO GET PAID`;
       }
     } else { mp.classList.add('hidden'); this.$('mission-reward').textContent = ''; }

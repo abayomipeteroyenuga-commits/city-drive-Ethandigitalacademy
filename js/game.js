@@ -889,8 +889,8 @@ export class Game {
     }
     this._clearRoute();
     if (m.type === 'drive') {
-      const dest = LANDMARKS.find(x => x.id === m.dest);
-      if (!dest) return false;
+      const dest = getCampaignDestination(m.level);
+      if (!dest) { this.ui.toast('MISSION DESTINATION UNAVAILABLE'); return false; }
       const p = this.controller.mesh.position;
       this.activeMission = { kind: 'campaign', campaignType: 'drive', campaign: m, name: `LEVEL ${m.level} — ${m.title}`, dest, startTime: performance.now(), dist: Math.hypot(dest.x - p.x, dest.z - p.z) / 100 };
       this._setRoute(p, dest, getCampaignColor(m.level));
@@ -904,9 +904,9 @@ export class Game {
       if (!race) return false;
       return this.startRace(race, { campaign: m });
     } else {
-      const objectiveDest = m.type === 'buy'
+      const objectiveDest = getCampaignDestination(m.level) || (m.type === 'buy'
         ? LANDMARKS.find(x => x.id === 'market')
-        : LANDMARKS.find(x => x.id === 'garage');
+        : LANDMARKS.find(x => x.id === 'garage'));
       this.activeMission = {
         kind: 'campaign',
         campaignType: m.type,
@@ -973,7 +973,9 @@ export class Game {
   startJob(job, opts = {}) {
     if (!job || this.mode !== 'driving' || !this.controller) { this.ui.toast('You must be driving to start a job'); return false; }
     if (!opts.campaign && this.activeMission?.kind === 'campaign') { this.ui.toast('FINISH THE CURRENT CAMPAIGN LEVEL FIRST'); return false; }
-    const dest = LANDMARKS[Math.floor(Math.random() * LANDMARKS.length)];
+    const stages = opts.campaign ? getCampaignJobStages(opts.campaign.level) : null;
+    const dest = stages?.pickup || (opts.campaign ? getCampaignDestination(opts.campaign.level) : LANDMARKS[Math.floor(Math.random() * LANDMARKS.length)]);
+    if (!dest) { this.ui.toast('MISSION DESTINATION UNAVAILABLE'); return false; }
     const start = this.mode === 'driving' ? this.controller.mesh.position : this.playerMesh.position;
     const dist = Math.hypot(dest.x - start.x, dest.z - start.z) / 100;
     this.activeMission = {
@@ -983,6 +985,8 @@ export class Game {
       type: job.type,
       name: opts.campaign ? `LEVEL ${opts.campaign.level} — ${opts.campaign.title}` : job.name,
       dest,
+      stages,
+      stage: stages ? 0 : null,
       startDamage: this.controller?.def.currentCondition ?? 100,
       startTime: performance.now(),
       dist
@@ -1002,7 +1006,7 @@ export class Game {
     this._clearRaceAI();
     this._clearRaceMarkers();
     this._clearMissionWaypoint();
-    const checkpoints = opts.checkpoints || [];
+    const checkpoints = opts.checkpoints || (opts.campaign ? (getCampaignRaceCheckpoints(opts.campaign.level) || []) : []);
     if (!checkpoints.length) {
       for (let i = 0; i < 5; i++) {
         checkpoints.push({
@@ -1243,9 +1247,24 @@ export class Game {
       // Completion is triggered by upgradeVehicle().
     } else if (this.activeMission.kind === 'campaign' && this.activeMission.campaignType === 'buy') {
       // Completion is triggered by buying a vehicle.
-    } else if ((this.activeMission.kind === 'campaign' && this.activeMission.campaignType === 'job') || this.activeMission.kind === 'job') {
-      // Campaign delivery missions use the same destination completion as side jobs,
-      // but must stay marked as campaign so the campaign reward is paid exactly once.
+    } else if (this.activeMission.kind === 'campaign' && this.activeMission.campaignType === 'job') {
+      const m = this.activeMission;
+      const d = Math.hypot(p.x - m.dest.x, p.z - m.dest.z);
+      if (d < 10 && !m.paid) {
+        if (m.stages && m.stage === 0) {
+          m.stage = 1;
+          m.dest = { ...m.stages.dropoff };
+          m.dist += Math.hypot(m.stages.dropoff.x - m.stages.pickup.x, m.stages.dropoff.z - m.stages.pickup.z) / 100;
+          const color = getCampaignColor(m.campaign.level);
+          this._setMissionWaypoint(m.dest.x, m.dest.z, color);
+          this._setRoute(p, m.dest, color);
+          this.audio.checkpoint();
+          this.ui.toast(`PICKUP COMPLETE → NOW DELIVER TO ${m.dest.name}`);
+        } else {
+          this._completeJob();
+        }
+      }
+    } else if (this.activeMission.kind === 'job') {
       const d = Math.hypot(p.x - this.activeMission.dest.x, p.z - this.activeMission.dest.z);
       if (d < 10 && !this.activeMission.paid) this._completeJob();
     } else if (this.activeMission.kind === 'gps') {
@@ -1269,6 +1288,7 @@ export class Game {
           const raceColor = this.activeMission?.campaign ? getCampaignColor(this.activeMission.campaign.level) : 0x00ff9d;
           this.activeMission.dest = { name: `CHECKPOINT ${this.activeMission.index + 1}`, x: next.x, z: next.z };
           this._setMissionWaypoint(next.x, next.z, raceColor);
+          this._setRoute(p, next, raceColor);
         } else {
           this.activeMission.dest = null;
         }
@@ -1399,6 +1419,16 @@ export class Game {
   buyVehicle(id) {
     const base = getVehicleById(id);
     if (!base) return false;
+    // Campaign Level 8 must actually be completed at the Marketplace.
+    // Opening the marketplace UI from anywhere must not silently complete the mission.
+    if (this.activeMission?.kind === 'campaign' && this.activeMission.campaignType === 'buy') {
+      const p = this.controller?.mesh?.position;
+      const market = LANDMARKS.find(x => x.id === 'market');
+      if (!p || !market || Math.hypot(p.x - market.x, p.z - market.z) > 18) {
+        this.ui.toast('DRIVE TO THE VEHICLE MARKETPLACE FIRST');
+        return false;
+      }
+    }
     if (this.state.player.level < base.requiredLevel) {
       this.ui.toast(`Requires level ${base.requiredLevel}`);
       return false;
@@ -1464,6 +1494,16 @@ export class Game {
 
   upgradeVehicle(v, part) {
     v.upgrades = v.upgrades || { engine: 0, transmission: 0, tires: 0, brakes: 0, suspension: 0, nitro: 0, fuelSystem: 0 };
+    // Campaign Level 3 is a garage visit + upgrade. Require the player to be
+    // physically at the Main Garage before the upgrade can complete the level.
+    if (this.activeMission?.kind === 'campaign' && this.activeMission.campaignType === 'upgrade') {
+      const p = this.controller?.mesh?.position;
+      const garage = LANDMARKS.find(x => x.id === 'garage');
+      if (!p || !garage || Math.hypot(p.x - garage.x, p.z - garage.z) > 18) {
+        this.ui.toast('DRIVE TO THE MAIN GARAGE FIRST');
+        return;
+      }
+    }
     if (v.upgrades[part] >= 5) { this.ui.toast('Max upgrade'); return; }
     const cost = 400 + v.upgrades[part] * 350 + Math.round(v.price * 0.02);
     if (!this.economy.canAfford(cost)) { this.ui.toast('INSUFFICIENT FUNDS'); return; }

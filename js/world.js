@@ -45,7 +45,7 @@ export const POIS = {
     { id: 'nova_motors', name: 'Nova Motors', x: -50, z: 50, stock: ['metro_s', 'urban_lx', 'falcon_sport'] },
     { id: 'elite_autos', name: 'Elite Autos', x: -90, z: 70, stock: ['royal_executive', 'titan_muscle'] },
     { id: 'speed_zone', name: 'Speed Zone', x: -80, z: -20, stock: ['falcon_sport', 'vortex_x', 'titan_muscle'] },
-    { id: 'bike_hub', name: 'Bike Hub', x: 90, z: 20, stock: ['street_hawk', 'thunder_r', 'dirt_runner', 'phantom_rr', 'apex_900', 'road_master'] },
+    { id: 'bike_hub', name: 'Bike Hub', x: 90, z: 20, stock: ['street_hawk', 'thunder_r', 'dirt_runner'] },
     { id: 'offroad', name: 'Off-Road Center', x: 300, z: -200, stock: ['city_explorer', 'grand_terrain', 'mountain_beast', 'dirt_runner'] },
     { id: 'commercial', name: 'Commercial Motors', x: 70, z: -190, stock: ['cargo_king', 'city_van', 'metro_bus'] }
   ],

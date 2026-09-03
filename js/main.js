@@ -23,7 +23,11 @@ async function boot() {
   // DIRECT RACING START: boot straight into the selected car on an open-road starting grid.
   // Vehicle selection remains available later from the garage; it is not the first screen.
   const first = ensureGame();
-  if (window.CityDriveWowMenu) window.CityDriveWowMenu.open(); else first.enterWorld(true, { startGrid: true });
+  if (window.CityDriveWowMenu) {
+    const mm=document.getElementById('main-menu'); if(mm) mm.classList.add('hidden');
+    const gc=document.getElementById('game-container'); if(gc) gc.classList.add('hidden');
+    window.CityDriveWowMenu.open();
+  } else first.enterWorld(true, { startGrid: true });
 }
 
 function wireMainMenuKeys() {
@@ -50,6 +54,9 @@ function ensureGame() {
   if (game) return game;
   const canvas = document.getElementById('game-canvas');
   game = new Game(canvas, ui);
+  window.game = game;
+  window.cityDriveGame = game;
+  window.dispatchEvent(new CustomEvent("citydrive:game-ready"));
   wirePause(game);
   return game;
 }

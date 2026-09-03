@@ -36,6 +36,82 @@ export const CAMPAIGN_MISSIONS = [
   { level: 20, title: 'KING OF NOVA CITY', type: 'drive', objective: 'Drive to Nova Tower and complete the 20-level campaign', dest: 'nova_tower', reward: 10000, xp: 1200 }
 ];
 
+
+// Campaign destinations are fixed to road-accessible approach points, not building centers.
+// This prevents the GPS from sending the player into a landmark's solid building mesh.
+export const CAMPAIGN_DESTINATIONS = {
+  1:  { name: 'Central Mall — Main Access Road', x: -80, z: 0 },
+  2:  { name: 'Courier Depot — Delivery Bay', x: -80, z: 80 },
+  3:  { name: 'Main Garage — Service Road', x: 0, z: -80 },
+  4:  { name: 'International Airport — Terminal Access Road', x: -280, z: 0 },
+  5:  { name: 'Street Race — Starting Grid', x: 0, z: -120 },
+  6:  { name: 'Food Delivery Hub — Pickup Road', x: -80, z: 80 },
+  7:  { name: 'Grand Hotel — Front Access Road', x: 0, z: 200 },
+  8:  { name: 'Vehicle Marketplace — Main Access Road', x: -80, z: 0 },
+  9:  { name: 'Circuit Race — Starting Grid', x: -160, z: -160 },
+  10: { name: 'Nova Tower — Main Access Road', x: 0, z: 0 },
+  11: { name: 'VIP Lounge — City Hall Access Road', x: 0, z: -80 },
+  12: { name: 'Highway Sprint — Highway Start', x: -280, z: 0 },
+  13: { name: 'Vehicle Marketplace — Main Access Road', x: -80, z: 0 },
+  14: { name: 'Off-Road Center — Dirt Access Road', x: 300, z: -220 },
+  15: { name: 'Nova Stadium — North Access Road', x: 160, z: 0 },
+  16: { name: 'Motorcycle Race — Starting Grid', x: 80, z: 80 },
+  17: { name: 'Riverside Bridge — Road Entrance', x: 0, z: 160 },
+  18: { name: 'Recovery Yard — Access Road', x: 80, z: -160 },
+  19: { name: 'Time Trial — Starting Grid', x: -80, z: -160 },
+  20: { name: 'Nova Tower — Final Access Road', x: 0, z: 0 }
+};
+
+export function getCampaignDestination(level) {
+  const d = CAMPAIGN_DESTINATIONS[Number(level)];
+  return d ? { ...d } : null;
+}
+
+// Multi-stage campaign job routes. Each point is placed on a drivable road
+// or designated access road; the player must reach the pickup first and then
+// deliver to the final destination. This prevents a campaign 'job' from being
+// completed merely by reaching an arbitrary landmark/building.
+export const CAMPAIGN_JOB_STAGES = {
+  2: {
+    pickup: { name: 'Courier Depot — Pickup Bay', x: -80, z: 80 },
+    dropoff: { name: 'Downtown Office — Delivery Road', x: 80, z: 80 }
+  },
+  6: {
+    pickup: { name: 'Food Hub — Pickup Road', x: -80, z: 80 },
+    dropoff: { name: 'Beachfront Restaurant — Delivery Road', x: 0, z: 200 }
+  },
+  11: {
+    pickup: { name: 'VIP Lounge — Pickup Road', x: 0, z: -80 },
+    dropoff: { name: 'Grand Hotel — VIP Entrance Road', x: 0, z: 200 }
+  },
+  14: {
+    pickup: { name: 'Off-Road Center — Contract Pickup', x: 320, z: -240 },
+    dropoff: { name: 'Mountain Recovery Point — Dirt Road', x: 300, z: -80 }
+  },
+  18: {
+    pickup: { name: 'Recovery Yard — Vehicle Pickup', x: 80, z: -160 },
+    dropoff: { name: 'Riverside Recovery Drop — Road Entrance', x: -280, z: 0 }
+  }
+};
+
+export function getCampaignJobStages(level) {
+  const s = CAMPAIGN_JOB_STAGES[Number(level)];
+  return s ? { pickup: { ...s.pickup }, dropoff: { ...s.dropoff } } : null;
+}
+
+export const CAMPAIGN_RACE_CHECKPOINTS = {
+  5:  [{x:0,z:80},{x:80,z:80},{x:80,z:0},{x:0,z:0},{x:-80,z:0}],
+  9:  [{x:-160,z:-160},{x:-80,z:-160},{x:-80,z:-80},{x:0,z:-80},{x:0,z:-160}],
+  12: [{x:-280,z:0},{x:-200,z:0},{x:-200,z:-80},{x:-280,z:-80},{x:-280,z:0}],
+  16: [{x:80,z:80},{x:160,z:80},{x:160,z:0},{x:80,z:0},{x:80,z:80}],
+  19: [{x:-80,z:-160},{x:-80,z:-80},{x:0,z:-80},{x:0,z:-160},{x:-80,z:-160}]
+};
+
+export function getCampaignRaceCheckpoints(level) {
+  const cps = CAMPAIGN_RACE_CHECKPOINTS[Number(level)];
+  return cps ? cps.map(p => ({ ...p })) : null;
+}
+
 export function getCampaignMission(level) {
   return CAMPAIGN_MISSIONS.find(m => m.level === level) || null;
 }

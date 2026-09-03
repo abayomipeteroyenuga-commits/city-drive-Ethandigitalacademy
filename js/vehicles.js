@@ -360,21 +360,6 @@ export const VEHICLES = [
     seats: 1,
     isMotorcycle: true
   },
-  // 13. ADVANCED POWER BIKE
-  {
-    id: 'phantom_rr', name: 'Phantom RR', manufacturer: 'Apex', type: VEHICLE_TYPES.MOTORCYCLE, tier: VEHICLE_TIERS.ADVANCED, price: 42000,
-    topSpeed: 305, acceleration: 2.5, handling: 96, braking: 88, weight: 188, grip: 0.93, offroad: 18, fuelCapacity: 17, fuelConsumption: 6.1, nitroCapacity: 85, condition: 100, mileage: 0, resaleFactor: 0.62, requiredLevel: 6, color: 0x6611cc, secondaryColor: 0x12051f, description: 'Track-inspired superbike with extreme acceleration and precision handling.', seats: 2, isMotorcycle: true
-  },
-  // 14. ELITE POWER BIKE
-  {
-    id: 'apex_900', name: 'Apex 900', manufacturer: 'Apex', type: VEHICLE_TYPES.MOTORCYCLE, tier: VEHICLE_TIERS.ELITE, price: 68000,
-    topSpeed: 340, acceleration: 2.2, handling: 98, braking: 92, weight: 181, grip: 0.96, offroad: 15, fuelCapacity: 18, fuelConsumption: 6.4, nitroCapacity: 100, condition: 100, mileage: 0, resaleFactor: 0.60, requiredLevel: 8, color: 0xeeeeee, secondaryColor: 0x111111, description: 'Premium superbike built for high-speed city racing.', seats: 2, isMotorcycle: true
-  },
-  // 15. PREMIUM CRUISER
-  {
-    id: 'road_master', name: 'Road Master', manufacturer: 'Apex', type: VEHICLE_TYPES.MOTORCYCLE, tier: VEHICLE_TIERS.PREMIUM, price: 35500,
-    topSpeed: 235, acceleration: 3.7, handling: 84, braking: 80, weight: 248, grip: 0.86, offroad: 28, fuelCapacity: 20, fuelConsumption: 5.5, nitroCapacity: 55, condition: 100, mileage: 0, resaleFactor: 0.64, requiredLevel: 5, color: 0x222222, secondaryColor: 0xbb8833, description: 'Power cruiser with strong acceleration, stability and long-range fuel.', seats: 2, isMotorcycle: true
-  },
   // 13. INTERMEDIATE TRUCK
   {
     id: 'cargo_king',

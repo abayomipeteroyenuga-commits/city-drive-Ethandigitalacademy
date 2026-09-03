@@ -321,3 +321,35 @@
 .modern-cash-display small{display:block;color:#708198;font-size:.46rem;letter-spacing:.18em;font-weight:900}.modern-cash-display strong{display:block;color:#fff;font-size:1.05rem;letter-spacing:.02em;margin-top:2px}.modern-cash-display .starting-cash{margin:0 0 0 5px;padding-left:10px;border-left:1px solid rgba(255,255,255,.1)}
 .showroom-picker{display:flex;flex-direction:column;align-items:flex-end}.clean-browse{display:flex;align-items:center;justify-content:flex-end;gap:12px;width:min(420px,100%);padding:12px 0}.clean-browse>div{text-align:center;min-width:180px}.clean-browse span{display:block;color:#63758d;font-size:.47rem;letter-spacing:.18em;font-weight:900}.clean-browse strong{display:block;font-size:1rem;margin-top:4px}.clean-browse small{display:block;color:#718198;font-size:.52rem;margin-top:4px}.browse-arrow{width:42px;height:42px;border:1px solid rgba(255,255,255,.13);border-radius:12px;background:rgba(8,14,27,.75);color:#fff;font-size:1.7rem;line-height:1;cursor:pointer;transition:.2s}.browse-arrow:hover{border-color:#00d4ff;color:#00d4ff;transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.25)}
 @media(max-width:760px){.modern-cash-display{min-width:0;padding:6px 9px;gap:7px}.modern-cash-display .cash-icon{width:26px;height:26px}.modern-cash-display strong{font-size:.9rem}.modern-cash-display .starting-cash{padding-left:6px;margin-left:2px}.showroom-picker{align-items:stretch}.clean-browse{width:100%;justify-content:center}.clean-browse>div{min-width:150px}.browse-arrow{width:38px;height:38px}}
+
+/* CITY DRIVE — organized landing menu color system */
+#main-menu .landing-content{max-width:1120px!important}
+#main-menu .landing-brand{position:relative}
+#main-menu .landing-brand:after{content:"";display:block;width:110px;height:4px;margin:12px auto 0;border-radius:99px;background:linear-gradient(90deg,#00d4ff,#7b5cff,#00ff9d)}
+#main-menu .landing-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0 14px}
+#main-menu .landing-actions .menu-btn{display:flex;align-items:center;justify-content:flex-start;gap:13px;min-height:68px;text-align:left;border-radius:15px;padding:12px 18px;white-space:normal}
+#main-menu .landing-actions .menu-btn b{display:block;font-size:.9rem;letter-spacing:.07em}
+#main-menu .landing-actions .menu-btn small{display:block;margin-top:4px;color:#9aabc2;font-size:.68rem;letter-spacing:.01em}
+#main-menu .menu-action-icon{display:grid;place-items:center;width:38px;height:38px;flex:0 0 38px;border-radius:11px;font-size:1rem;background:rgba(255,255,255,.1)}
+#main-menu .menu-action-drive{background:linear-gradient(135deg,rgba(0,212,255,.22),rgba(0,160,200,.12));border-color:rgba(0,212,255,.55)}
+#main-menu .menu-action-drive .menu-action-icon{background:rgba(0,212,255,.18);color:#00d4ff}
+#main-menu .menu-action-continue{background:linear-gradient(135deg,rgba(123,92,255,.20),rgba(68,80,180,.12));border-color:rgba(123,92,255,.5)}
+#main-menu .menu-action-continue .menu-action-icon{background:rgba(123,92,255,.2);color:#a991ff}
+#main-menu .landing-menu-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:10px 0 15px}
+#main-menu .landing-menu-card{min-height:92px;padding:14px;border-radius:14px;background:rgba(10,17,32,.72);border:1px solid rgba(255,255,255,.09);text-align:left;position:relative;overflow:hidden}
+#main-menu .landing-menu-card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--menu-accent)}
+#main-menu .landing-menu-card span{display:block;font-size:.62rem;color:var(--menu-accent);font-weight:900;letter-spacing:.12em}
+#main-menu .landing-menu-card b{display:block;margin-top:7px;font-size:.78rem;color:#fff;letter-spacing:.06em}
+#main-menu .landing-menu-card small{display:block;margin-top:5px;color:#8393aa;font-size:.64rem;line-height:1.35}
+#main-menu .landing-menu-card.campaign{--menu-accent:#ff4d4d}
+#main-menu .landing-menu-card.drive{--menu-accent:#00d4ff}
+#main-menu .landing-menu-card.garage{--menu-accent:#00ff9d}
+#main-menu .landing-menu-card.races{--menu-accent:#ffb52e}
+#main-menu .landing-note i{font-style:normal;color:#52617a;margin:0 3px}
+@media(max-width:760px){
+ #main-menu .landing-actions{grid-template-columns:1fr}
+ #main-menu .landing-menu-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:430px){
+ #main-menu .landing-menu-grid{grid-template-columns:1fr}
+}
