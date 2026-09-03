@@ -40,26 +40,26 @@ export const CAMPAIGN_MISSIONS = [
 // Campaign destinations are fixed to road-accessible approach points, not building centers.
 // This prevents the GPS from sending the player into a landmark's solid building mesh.
 export const CAMPAIGN_DESTINATIONS = {
-  1:  { name: 'Central Mall — Main Access Road', x: -80, z: 0 },
-  2:  { name: 'Courier Depot — Delivery Bay', x: -80, z: 80 },
-  3:  { name: 'Main Garage — Service Road', x: 0, z: -80 },
-  4:  { name: 'International Airport — Terminal Access Road', x: -280, z: 0 },
-  5:  { name: 'Street Race — Starting Grid', x: 0, z: -120 },
-  6:  { name: 'Food Delivery Hub — Pickup Road', x: -80, z: 80 },
-  7:  { name: 'Grand Hotel — Front Access Road', x: 0, z: 200 },
-  8:  { name: 'Vehicle Marketplace — Main Access Road', x: -80, z: 0 },
+  1:  { name: 'Central Mall — OPEN ROAD DROP ZONE', x: -80, z: 0 },
+  2:  { name: 'Courier Depot — OPEN ROAD PICKUP', x: -80, z: 80 },
+  3:  { name: 'Main Garage — OPEN SERVICE ROAD', x: 0, z: -80 },
+  4:  { name: 'Airport — OPEN TERMINAL ROAD', x: -240, z: 0 },
+  5:  { name: 'Street Race — OPEN START GRID', x: 0, z: -160 },
+  6:  { name: 'Food Hub — OPEN PICKUP ROAD', x: -80, z: 80 },
+  7:  { name: 'Grand Hotel — OPEN ACCESS ROAD', x: 0, z: 160 },
+  8:  { name: 'Vehicle Marketplace — OPEN ACCESS ROAD', x: -80, z: 0 },
   9:  { name: 'Circuit Race — Starting Grid', x: -160, z: -160 },
-  10: { name: 'Nova Tower — Main Access Road', x: 0, z: 0 },
-  11: { name: 'VIP Lounge — City Hall Access Road', x: 0, z: -80 },
-  12: { name: 'Highway Sprint — Highway Start', x: -280, z: 0 },
-  13: { name: 'Vehicle Marketplace — Main Access Road', x: -80, z: 0 },
-  14: { name: 'Off-Road Center — Dirt Access Road', x: 300, z: -220 },
-  15: { name: 'Nova Stadium — North Access Road', x: 160, z: 0 },
-  16: { name: 'Motorcycle Race — Starting Grid', x: 80, z: 80 },
-  17: { name: 'Riverside Bridge — Road Entrance', x: 0, z: 160 },
-  18: { name: 'Recovery Yard — Access Road', x: 80, z: -160 },
-  19: { name: 'Time Trial — Starting Grid', x: -80, z: -160 },
-  20: { name: 'Nova Tower — Final Access Road', x: 0, z: 0 }
+  10: { name: 'Nova Tower — OPEN CITY ROAD', x: 0, z: 0 },
+  11: { name: 'VIP Lounge — OPEN PICKUP ROAD', x: 0, z: -80 },
+  12: { name: 'Highway Sprint — OPEN HIGHWAY START', x: -240, z: 0 },
+  13: { name: 'Vehicle Marketplace — OPEN ACCESS ROAD', x: -80, z: 0 },
+  14: { name: 'Off-Road Center — OPEN DIRT PAD', x: 320, z: -240 },
+  15: { name: 'Nova Stadium — OPEN NORTH ROAD', x: 160, z: 0 },
+  16: { name: 'Motorcycle Race — OPEN START GRID', x: 80, z: 80 },
+  17: { name: 'Riverside Bridge — OPEN ROAD ENTRANCE', x: 0, z: 160 },
+  18: { name: 'Recovery Yard — OPEN ACCESS ROAD', x: 80, z: -160 },
+  19: { name: 'Time Trial — OPEN START GRID', x: -80, z: -160 },
+  20: { name: 'Nova Tower — FINAL OPEN CITY ROAD', x: 0, z: 0 }
 };
 
 export function getCampaignDestination(level) {
@@ -74,23 +74,23 @@ export function getCampaignDestination(level) {
 export const CAMPAIGN_JOB_STAGES = {
   2: {
     pickup: { name: 'Courier Depot — Pickup Bay', x: -80, z: 80 },
-    dropoff: { name: 'Downtown Office — Delivery Road', x: 80, z: 80 }
+    dropoff: { name: 'Downtown Office — OPEN DELIVERY ROAD', x: 80, z: 80 }
   },
   6: {
-    pickup: { name: 'Food Hub — Pickup Road', x: -80, z: 80 },
-    dropoff: { name: 'Beachfront Restaurant — Delivery Road', x: 0, z: 200 }
+    pickup: { name: 'Food Hub — OPEN PICKUP ROAD', x: -80, z: 80 },
+    dropoff: { name: 'Beachfront Restaurant — OPEN DELIVERY ROAD', x: 0, z: 200 }
   },
   11: {
-    pickup: { name: 'VIP Lounge — Pickup Road', x: 0, z: -80 },
-    dropoff: { name: 'Grand Hotel — VIP Entrance Road', x: 0, z: 200 }
+    pickup: { name: 'VIP Lounge — OPEN PICKUP ROAD', x: 0, z: -80 },
+    dropoff: { name: 'Grand Hotel — OPEN VIP ROAD', x: 0, z: 200 }
   },
   14: {
-    pickup: { name: 'Off-Road Center — Contract Pickup', x: 320, z: -240 },
-    dropoff: { name: 'Mountain Recovery Point — Dirt Road', x: 300, z: -80 }
+    pickup: { name: 'Off-Road Center — OPEN CONTRACT PAD', x: 320, z: -240 },
+    dropoff: { name: 'Mountain Recovery Point — OPEN DIRT ROAD', x: 300, z: -80 }
   },
   18: {
-    pickup: { name: 'Recovery Yard — Vehicle Pickup', x: 80, z: -160 },
-    dropoff: { name: 'Riverside Recovery Drop — Road Entrance', x: -280, z: 0 }
+    pickup: { name: 'Recovery Yard — OPEN VEHICLE PICKUP', x: 80, z: -160 },
+    dropoff: { name: 'Riverside Recovery Drop — OPEN ROAD', x: -280, z: 0 }
   }
 };
 

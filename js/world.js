@@ -286,6 +286,11 @@ export class World {
   }
 
   _districts() {
+    // BUILDING-FREE CITY MODE: keep the playable road network completely open.
+    // No solid buildings are generated, so traffic, pedestrians, missions and
+    // GPS routes can never terminate inside a building collider.
+    return;
+
     // Downtown towers
     const rng = (s) => {
       let a = s;
@@ -318,40 +323,13 @@ export class World {
   }
 
   _landmarks() {
-    // Nova Tower
-    this._block(24, 24, 16, 90, 16, 0x4a6a88);
-    this._block(24, 24, 8, 108, 8, 0x88ccee);
-    // Mall
-    this._block(-40, 40, 36, 12, 28, 0x886666);
-    // Stadium
-    const stad = new THREE.Mesh(
-      new THREE.CylinderGeometry(22, 26, 10, 24, 1, true),
-      new THREE.MeshStandardMaterial({ color: 0x445566, side: THREE.DoubleSide })
-    );
-    stad.position.set(120, 5, -48);
-    this.scene.add(stad);
-    // City Hall
-    this._block(-20, -40, 22, 16, 18, 0x887766);
-    // Airport terminal
-    this._block(-280, -110, 50, 10, 18, 0x8899aa);
-    const runway = new THREE.Mesh(
-      new THREE.BoxGeometry(18, 0.1, 160),
-      new THREE.MeshStandardMaterial({ color: 0x44444a })
-    );
-    runway.position.set(-280, 0.1, -160);
-    this.scene.add(runway);
-    // Hotel
-    this._block(10, 240, 18, 32, 14, 0xaa8866);
-    // Police
-    this._block(60, 60, 16, 14, 16, 0x2244aa);
-    // Garage
-    this._block(40, -64, 24, 8, 16, 0x556677);
-    // Repair
-    this._block(30, -104, 16, 7, 12, 0x667744);
-    // Race arena
-    this._block(-120, -170, 8, 6, 8, 0x884444);
+    // BUILDING-FREE CITY MODE:
+    // Campaign navigation is designed around open roads and destination pads.
+    // Do not spawn solid landmark/building meshes that can block the player or
+    // make the GPS appear to point into a structure. POI cones remain available
+    // as lightweight visual destination markers.
+    this.buildings = [];
   }
-
 
   _streetFurniture() {
     const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a3223, roughness: .95 });

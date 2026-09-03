@@ -477,7 +477,7 @@ export class UI {
         <button class="menu-btn primary" data-buy="${v.id}">BUY VEHICLE</button>
       </div>`).join('');
     this._dealIndex = 0;
-    this.openPanel(dealer.name || 'DEALERSHIP', `<div class="dealer-hero"><strong>CHOOSE YOUR RIDE</strong><span>18+ modern vehicles • Cars • SUVs • Power Bikes • Commercial</span></div><p style="color:#8aa;font-size:.8rem;margin-bottom:8px">← → browse · Enter select · B buy · T test drive · Esc exit</p>` + cards);
+    this.openPanel(dealer.name || 'DEALERSHIP', `<div class="dealer-hero"><strong>CHOOSE YOUR RIDE</strong><span>15 modern vehicles • Cars • SUVs • Power Bikes • Commercial</span></div><p style="color:#8aa;font-size:.8rem;margin-bottom:8px">← → browse · Enter select · B buy · T test drive · Esc exit</p>` + cards);
     this.$('ui-panels').querySelectorAll('[data-buy]').forEach(b => {
       b.onclick = () => {
         if (game.buyVehicle(b.dataset.buy)) this.closePanel();

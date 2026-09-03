@@ -11,7 +11,7 @@ import { checkAchievements } from './achievements.js';
 import { AudioSystem } from './audio.js';
 import { Settings } from './settings.js';
 import { Multiplayer, makeRoomCode } from './multiplayer.js';
-import { CAMPAIGN_MISSIONS, getCampaignMission, getCampaignColor, getDailyChallenge, getDailyDateKey } from './missions.js';
+import { CAMPAIGN_MISSIONS, getCampaignMission, getCampaignColor, getCampaignDestination, getCampaignJobStages, getCampaignRaceCheckpoints, getDailyChallenge, getDailyDateKey } from './missions.js';
 import { SHOP_ITEMS, getShopItem } from './shop.js';
 import { getCareerScore, saveLocalRank } from './ranking.js';
 
@@ -509,7 +509,7 @@ export class Game {
     const pos = driving ? this.controller.mesh.position : this.playerMesh.position;
     const spd = driving ? Math.abs(this.controller.speed) : 0;
     const reckless = driving && (spd > 28) && this.controller.handbrake;
-    const wanted = this.npc.update(dt, pos, spd, { reckless, busted: false });
+    const wanted = this.npc.update(dt, pos, spd, { reckless, busted: false, controller: this.controller, playerMesh: driving ? this.controller.mesh : this.playerMesh });
     if (this.npc.wanted >= 1 && Math.random() < dt * 2) this.audio.sirenTick(true);
 
     const d = this.world.getDistrict(pos.x, pos.z);
@@ -532,6 +532,7 @@ export class Game {
         // final checkpoint before the human player.
         if (bot.cp < this.activeMission.checkpoints.length - 1 && d < 8) bot.cp++;
       }
+      this._separateDynamicCars(this._raceAI, this.controller?.mesh, this.controller);
     }
 
     if (this.mp.active) {
@@ -910,8 +911,8 @@ export class Game {
       return this.startRace(race, { campaign: m });
     } else {
       const objectiveDest = getCampaignDestination(m.level) || (m.type === 'buy'
-        ? LANDMARKS.find(x => x.id === 'market')
-        : LANDMARKS.find(x => x.id === 'garage'));
+        ? getCampaignDestination(m.level)
+        : getCampaignDestination(m.level));
       this.activeMission = {
         kind: 'campaign',
         campaignType: m.type,
@@ -1100,8 +1101,8 @@ export class Game {
       // parallel contest: upgrades race to the garage, while vehicle purchases
       // race to the marketplace. They stop short of the objective.
       const objective = m.campaignType === 'buy'
-        ? LANDMARKS.find(x => x.id === 'market')
-        : LANDMARKS.find(x => x.id === 'garage');
+        ? getCampaignDestination(m.campaign?.level || 1)
+        : getCampaignDestination(m.campaign?.level || 1);
       const target = objective || { x: 40, z: -60 };
       route = [
         { x: this.controller.mesh.position.x, z: this.controller.mesh.position.z },
@@ -1151,6 +1152,50 @@ export class Game {
     this.ui.toast('3 RIVALS ENTERED THE MISSION — BEAT THEM TO THE FINISH!');
   }
 
+  _separateDynamicCars(cars, playerMesh = null, playerController = null) {
+    const radiusOf = (def) => def?.id === 'metro_bus' ? 5.7 : def?.isMotorcycle ? 1.25 : 2.45;
+    for (let i = 0; i < cars.length; i++) {
+      const a = cars[i];
+      if (!a?.mesh) continue;
+      const ra = radiusOf(a.def);
+      for (let j = i + 1; j < cars.length; j++) {
+        const b = cars[j];
+        if (!b?.mesh) continue;
+        const rb = radiusOf(b.def);
+        const dx = b.mesh.position.x - a.mesh.position.x;
+        const dz = b.mesh.position.z - a.mesh.position.z;
+        const min = ra + rb;
+        const d = Math.hypot(dx, dz);
+        if (d >= min) continue;
+        const nx = dx / (d || 0.001), nz = dz / (d || 0.001);
+        const overlap = min - d;
+        a.mesh.position.x -= nx * overlap * 0.5;
+        a.mesh.position.z -= nz * overlap * 0.5;
+        b.mesh.position.x += nx * overlap * 0.5;
+        b.mesh.position.z += nz * overlap * 0.5;
+        if ('speed' in a) a.speed *= 0.25;
+        if ('speed' in b) b.speed *= 0.25;
+      }
+      if (playerMesh) {
+        const rp = radiusOf(playerController?.def);
+        const dx = playerMesh.position.x - a.mesh.position.x;
+        const dz = playerMesh.position.z - a.mesh.position.z;
+        const min = ra + rp;
+        const d = Math.hypot(dx, dz);
+        if (d < min) {
+          const nx = dx / (d || 0.001), nz = dz / (d || 0.001);
+          const overlap = min - d;
+          a.mesh.position.x -= nx * overlap * 0.55;
+          a.mesh.position.z -= nz * overlap * 0.55;
+          playerMesh.position.x += nx * overlap * 0.45;
+          playerMesh.position.z += nz * overlap * 0.45;
+          if ('speed' in a) a.speed = Math.min(a.speed, 1.5);
+          if (playerController) { playerController.speed *= 0.2; playerController.lastPos.copy(playerMesh.position); }
+        }
+      }
+    }
+  }
+
   _updateCampaignRivals(dt) {
     const m = this.activeMission;
     if (!m?.campaign || !this._campaignRivals.length) return;
@@ -1182,6 +1227,7 @@ export class Game {
       const totalSegments = Math.max(1, rival.route.length - 1);
       rival.progress = Math.min(92, ((Math.max(0, rival.segment - 1) + (1 - Math.min(1, d / 100))) / totalSegments) * 100);
     }
+    this._separateDynamicCars(this._campaignRivals, this.controller?.mesh, this.controller);
   }
 
   _clearCampaignRivals() {
