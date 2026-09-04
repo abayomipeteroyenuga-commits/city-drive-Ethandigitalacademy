@@ -65,7 +65,6 @@ export const POIS = {
     { id: 'checkpoint', name: 'Checkpoint Race', x: 40, z: 100 },
     { id: 'highway', name: 'Highway Sprint', x: -200, z: 0 },
     { id: 'offroad', name: 'Off-Road Race', x: 300, z: -240 },
-    { id: 'bike', name: 'Motorcycle Race', x: 90, z: 40 },
     { id: 'timetrial', name: 'Time Trial', x: -100, z: -100 },
     { id: 'drift', name: 'Drift Challenge', x: -140, z: -130 }
   ]
@@ -343,40 +342,10 @@ export class World {
   }
 
   _districts() {
-    // BUILDING-FREE CITY MODE: keep the playable road network completely open.
-    // No solid buildings are generated, so traffic, pedestrians, missions and
-    // GPS routes can never terminate inside a building collider.
-    return;
-
-    // Downtown towers
-    const rng = (s) => {
-      let a = s;
-      return () => { a = (a * 16807) % 2147483647; return (a - 1) / 2147483646; };
-    };
-    const r = rng(42);
-    for (let i = 0; i < 28; i++) {
-      const x = (r() - 0.5) * 140;
-      const z = (r() - 0.5) * 140;
-      if (Math.abs(x) % 80 < 18 || Math.abs(z) % 80 < 18) continue;
-      const h = 18 + r() * 55;
-      this._block(x, z, 10 + r() * 10, h, 10 + r() * 10, 0x3a4560 + Math.floor(r() * 20) * 0x010101);
-    }
-    // Residential houses
-    for (let i = 0; i < 24; i++) {
-      const x = 140 + (r() - 0.3) * 120;
-      const z = 20 + (r() - 0.5) * 120;
-      this._block(x, z, 8, 5 + r() * 4, 10, 0x6a5a4a);
-    }
-    // Industrial
-    for (let i = 0; i < 12; i++) {
-      const x = 40 + r() * 120;
-      const z = -160 - r() * 80;
-      this._block(x, z, 18 + r() * 16, 10 + r() * 8, 22, 0x555548);
-    }
-    // Commercial
-    for (let i = 0; i < 10; i++) {
-      this._block(-140 + r() * 80, 50 + r() * 80, 16, 12 + r() * 16, 16, 0x4a3a4a);
-    }
+    // Building-free playable world: intentionally no solid building meshes.
+    // Keeping this function small also avoids carrying dead procedural-generation
+    // code in the runtime bundle.
+    this.buildings = [];
   }
 
   _landmarks() {
@@ -449,7 +418,7 @@ export class World {
     this.scene.add(this.hemi);
     this.sun = new THREE.DirectionalLight(0xfff2d8, 1.35);
     this.sun.position.set(80, 140, 40);
-    this.sun.castShadow = true;
+    this.sun.castShadow = false;
     this.sun.shadow.mapSize.set(2048, 2048);
     this.sun.shadow.bias = -0.0002;
     this.sun.shadow.normalBias = 0.015;
@@ -459,6 +428,8 @@ export class World {
     this.sun.shadow.camera.right = 120;
     this.sun.shadow.camera.top = 120;
     this.sun.shadow.camera.bottom = -120;
+    this.sun.target.position.set(0, 0, 0);
+    this.scene.add(this.sun.target);
     this.scene.add(this.sun);
     this.scene.fog = new THREE.Fog(0x87a0b8, 110, 700);
     this.scene.background = new THREE.Color(0x8fb8d8);

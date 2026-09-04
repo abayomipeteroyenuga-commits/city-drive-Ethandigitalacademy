@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 
 const mat = (color, roughness=.42, metalness=.35, emissive=0, ei=0) => new THREE.MeshStandardMaterial({ color, roughness, metalness, emissive, emissiveIntensity: ei });
-function mesh(geo, material, x=0,y=0,z=0){ const m=new THREE.Mesh(geo,material); m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true; return m; }
+function mesh(geo, material, x=0,y=0,z=0){ const m=new THREE.Mesh(geo,material); m.position.set(x,y,z); m.castShadow=false; m.receiveShadow=false; return m; }
 function box(w,h,d,color,x=0,y=0,z=0, r=.42, metal=.35){ return mesh(new THREE.BoxGeometry(w,h,d),mat(color,r,metal),x,y,z); }
 function wheel(g,x,y,z,r=.34,w=.24){
   const tire=mesh(new THREE.TorusGeometry(r,Math.max(.075,r*.22),10,18),mat(0x090b0e,.88,.08));
@@ -102,7 +102,7 @@ function buildMuscle(g,def,c,s){
   windows(g,w,l,.98); lights(g,w,l); mirrors(g,w,.05); wheels4(g,w,l,.37,.37); aero(g,w,l,c,s,true);
 }
 function buildGwagon(g,def,c,s){
-  // Boxy luxury 4x4 silhouette based on the user's supplied G-Wagon reference:
+  // Boxy luxury 4x4 silhouette based on the Titan X4 fictional design reference:
   // tall squared cabin, upright front, round lamps, wide stance and rear spare.
   const w=2.22,l=4.72;
   g.add(box(w,.62,l,c,0,.66,0,.18,.5));
@@ -132,7 +132,7 @@ function buildGwagon(g,def,c,s){
   g.add(box(w*1.02,.18,.20,0x171b20,0,.53,-2.34,.08,.65));
   for(const x of [-w*.56,w*.56]) g.add(box(.12,.10,3.0,0x171b20,x,.58,-.05,.04,.7));
   wheels4(g,w,l,.43,.42);
-  // rear-mounted spare wheel, a key G-Wagon visual cue
+  // rear-mounted spare wheel, a key Titan X4 visual cue
   const spare=mesh(new THREE.TorusGeometry(.43,.095,12,24),mat(0x090b0e,.88,.10),0,.96,-2.40); spare.rotation.x=Math.PI/2; g.add(spare);
   const hub=mesh(new THREE.CylinderGeometry(.17,.17,.10,16),mat(0x8e969e,.22,.82),0,.96,-2.42); hub.rotation.x=Math.PI/2; g.add(hub);
   // rear light bars

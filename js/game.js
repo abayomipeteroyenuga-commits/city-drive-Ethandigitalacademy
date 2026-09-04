@@ -36,6 +36,8 @@ export class Game {
     this.missionWaypoint = null;
     this.destinationTracker = null;
     this.destinationTrackerColor = 0x00d4ff;
+    this._routeProgressTimer = 0;
+    this._routeProgressPos = new THREE.Vector3();
     // Three AI rivals accompany every campaign level and are capped before the finish.
     this._campaignRivals = [];
     this.emoteState = { name: '', emoji: '', until: 0, pulse: 0 };
@@ -54,7 +56,7 @@ export class Game {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.08;
     this.renderer.useLegacyLights = false;
-    this.renderer.shadowMap.enabled = Settings.get('graphics') !== 'low';
+    this.renderer.shadowMap.enabled = false;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.shadowMap.autoUpdate = false;
 
@@ -238,8 +240,8 @@ export class Game {
     this._resetSessionRuntime();
     this.state.player = { ...this.state.player, ...data.player };
     this.state.garage = data.garage || this.state.garage;
-    // Legacy saves sometimes carried the old black G-Wagon. New games must
-    // always start with the requested green G-Wagon; preserve deliberate
+    // Legacy saves sometimes carried the old black Titan X4. New games must
+    // always start with the requested green Titan X4; preserve deliberate
     // player repaint choices via colorCustomized.
     (this.state.garage.vehicles || []).forEach(v => {
       if (v?.id === 'metro_s') {
@@ -478,8 +480,11 @@ export class Game {
       return;
     }
     this.update(dt);
+    this._updateFollowCarShadow();
     this._shadowTick = (this._shadowTick || 0) + 1;
-    if (this.renderer.shadowMap.enabled && this._shadowTick % 20 === 0) this.renderer.shadowMap.needsUpdate = true;
+    // Refresh often enough that the shadow frustum follows the moving car
+    // without paying the cost of a shadow-map rebuild every render frame.
+    if (false) this.renderer.shadowMap.needsUpdate = true;
     this.render();
   };
 
@@ -596,7 +601,7 @@ export class Game {
     const newly = checkAchievements(this.state, this.flags);
     newly.forEach(a => this.ui.toast(`Achievement: ${a.name}`));
 
-    this._updateRouteProgress();
+    this._updateRouteProgress(dt);
     this._updateCamera(dt);
     this.ui.updateHUD(this);
     if (this._saveTimer === undefined) this._saveTimer = 0;
@@ -837,9 +842,16 @@ export class Game {
     this.activeRoute = null;
   }
 
-  _updateRouteProgress() {
+  _updateRouteProgress(dt = 0) {
     if (!this.routeLine || !this.activeMission || !this.controller) return;
+    this._routeProgressTimer += Number(dt) || 0;
     const p = this.controller.mesh.position;
+    // Rebuild the route geometry at a modest cadence and only after the car
+    // has moved. This removes a per-frame geometry dispose/allocation hotspot.
+    const moved = this._routeProgressPos.distanceToSquared(p) > 9;
+    if (this._routeProgressTimer < 0.10 && !moved) return;
+    this._routeProgressTimer = 0;
+    this._routeProgressPos.copy(p);
     const route = this.activeRoute || [];
     if (route.length < 2) return;
     let nearest = 1, best = Infinity;
@@ -860,8 +872,8 @@ export class Game {
       dest: { name: String(dest.name || 'Destination'), x: Number(dest.x), z: Number(dest.z) },
       startDamage: this.controller?.def.currentCondition ?? 100,
       startTime: performance.now(),
-      timeLimit: opts.campaign ? this._campaignTimeLimit('job') : null,
-      deadline: opts.campaign ? performance.now() + this._campaignTimeLimit('job') * 1000 : null,
+      timeLimit: null,
+      deadline: null,
       dist
     };
     this._setRoute(start, {x:Number(dest.x), z:Number(dest.z)}, 0x00d4ff);
@@ -962,6 +974,11 @@ export class Game {
   startCampaignMission() {
     const m = this.getCampaignMission();
     if (!m || this.mode !== 'driving' || !this.controller) return false;
+    if (this.activeMission) {
+      if (this.activeMission.campaign?.level === m.level) return true;
+      this.ui.toast('FINISH THE CURRENT MISSION FIRST');
+      return false;
+    }
     if ((this.state.player.campaignCompleted || []).includes(m.level)) {
       this.ui.toast('CAMPAIGN COMPLETE — ALL 20 LEVELS FINISHED');
       return false;
@@ -983,9 +1000,10 @@ export class Game {
       if (!race) return false;
       return this.startRace(race, { campaign: m });
     } else {
-      const objectiveDest = getCampaignDestination(m.level) || (m.type === 'buy'
-        ? getCampaignDestination(m.level)
-        : getCampaignDestination(m.level));
+      // Upgrade/buy levels use the exact physical service location as their
+      // navigation target. Completion is still validated against that location
+      // inside upgradeVehicle()/buyVehicle().
+      const objectiveDest = getCampaignDestination(m.level);
       this.activeMission = {
         kind: 'campaign',
         campaignType: m.type,
@@ -1143,7 +1161,10 @@ export class Game {
 
   startJob(job, opts = {}) {
     if (!job || this.mode !== 'driving' || !this.controller) { this.ui.toast('You must be driving to start a job'); return false; }
-    if (!opts.campaign && this.activeMission?.kind === 'campaign') { this.ui.toast('FINISH THE CURRENT CAMPAIGN LEVEL FIRST'); return false; }
+    if (this.activeMission) {
+      this.ui.toast(opts.campaign ? 'CAMPAIGN MISSION ALREADY ACTIVE' : 'FINISH THE CURRENT MISSION FIRST');
+      return false;
+    }
     const stages = opts.campaign ? getCampaignJobStages(opts.campaign.level) : null;
     const dest = stages?.pickup || (opts.campaign ? getCampaignDestination(opts.campaign.level) : LANDMARKS[Math.floor(Math.random() * LANDMARKS.length)]);
     if (!dest) { this.ui.toast('MISSION DESTINATION UNAVAILABLE'); return false; }
@@ -1174,7 +1195,10 @@ export class Game {
 
   startRace(race, opts = {}) {
     if (!race || this.mode !== 'driving' || !this.controller) { this.ui.toast('You must be driving to start a race'); return false; }
-    if (!opts.campaign && this.activeMission?.kind === 'campaign') { this.ui.toast('FINISH THE CURRENT CAMPAIGN LEVEL FIRST'); return false; }
+    if (this.activeMission) {
+      this.ui.toast(opts.campaign ? 'CAMPAIGN RACE ALREADY ACTIVE' : 'FINISH THE CURRENT MISSION FIRST');
+      return false;
+    }
     if (opts.campaign?.race === 'bike') { this.ui.toast('This race has been upgraded to a four-wheel performance race'); return false; }
     this._clearRaceAI();
     this._clearRaceMarkers();
@@ -1484,6 +1508,17 @@ export class Game {
           const color = getCampaignColor(m.campaign.level);
           this._setMissionWaypoint(m.dest.x, m.dest.z, color);
           this._setRoute(p, m.dest, color);
+          // Carry campaign rivals into the delivery stage instead of leaving
+          // them parked at the pickup point.
+          for (const rival of this._campaignRivals || []) {
+            rival.route = [
+              { x: rival.mesh.position.x, z: rival.mesh.position.z },
+              { x: m.dest.x, z: m.dest.z }
+            ];
+            rival.segment = 1;
+            rival.finished = false;
+            rival.progress = Math.min(45, Number(rival.progress) || 0);
+          }
           this.audio.checkpoint();
           this.ui.toast(`PICKUP COMPLETE → NOW DELIVER TO ${m.dest.name}`);
         } else {
@@ -1858,7 +1893,7 @@ export class Game {
     let desired, look;
     if (m.front && this.mode === 'driving') {
       // Front camera: place the camera ahead of the car and look back at its
-      // grille. This makes the G-Wagon front visible during races and turns.
+      // grille. This makes the Titan X4 front visible during races and turns.
       const d = m.distance * (isBike ? 0.9 : 1);
       desired = new THREE.Vector3(
         target.position.x + Math.sin(heading) * d,
@@ -1937,6 +1972,23 @@ export class Game {
     }
     this.ui.toast('Test drive ended');
     this.ui.offerTestDriveReturn(this, catalogId);
+  }
+
+  _updateFollowCarShadow() {
+    if (!this.renderer.shadowMap.enabled || !this.world?.sun) return;
+    const target = this.mode === 'driving' && this.controller ? this.controller.mesh : this.playerMesh;
+    if (!target) return;
+    const sun = this.world.sun;
+    const horizontalLen = Math.hypot(sun.position.x, sun.position.z) || 1;
+    const lightDistance = 150;
+    // Keep the sun direction but translate the shadow volume with the active car.
+    sun.position.set(
+      target.position.x + (sun.position.x / horizontalLen) * lightDistance,
+      Math.max(target.position.y + 80, sun.position.y),
+      target.position.z + (sun.position.z / horizontalLen) * lightDistance
+    );
+    sun.target.position.set(target.position.x, target.position.y + 0.5, target.position.z);
+    sun.target.updateMatrixWorld();
   }
 
   render() {

@@ -202,15 +202,20 @@ export class NPCSystem {
       }
     }
 
-    // Pairwise hard collision pass. This is intentionally separate from movement so
-    // cars cannot visually enter one another between frames.
+    // Local collision pass. Only nearby visible cars need pair checks; the
+    // previous full O(n²) pass wasted work on distant traffic and scaled poorly
+    // when density was increased. The broad-phase radius is comfortably larger
+    // than the collision radii, so collision behavior is preserved.
+    const trafficCollisionRange2 = 90 * 90;
     for (let i = 0; i < this.traffic.length; i++) {
       const a = this.traffic[i];
       if (!a.mesh.visible) continue;
       for (let j = i + 1; j < this.traffic.length; j++) {
         const b = this.traffic[j];
         if (!b.mesh.visible) continue;
-        this._resolveCarPair(a, b);
+        const dx = a.mesh.position.x - b.mesh.position.x;
+        const dz = a.mesh.position.z - b.mesh.position.z;
+        if (dx * dx + dz * dz <= trafficCollisionRange2) this._resolveCarPair(a, b);
       }
       this._resolvePlayerCollision(a, playerMesh, playerController);
     }
@@ -255,17 +260,24 @@ export class NPCSystem {
       }
     }
 
-    // Final hard collision pass: police are vehicles too. This prevents
-    // civilian traffic, police cars and the player's car from interpenetrating.
+    // Police broad-phase collision checks. Keep police/traffic/player separation
+    // hard, but skip distant pairs that cannot possibly intersect this frame.
+    const policeCollisionRange2 = 90 * 90;
     for (let i = 0; i < this.police.length; i++) {
       const a = this.police[i];
       if (!a?.mesh?.visible) continue;
       for (let j = i + 1; j < this.police.length; j++) {
         const b = this.police[j];
-        if (b?.mesh?.visible) this._resolveCarPair(a, b);
+        if (!b?.mesh?.visible) continue;
+        const dx = a.mesh.position.x - b.mesh.position.x;
+        const dz = a.mesh.position.z - b.mesh.position.z;
+        if (dx * dx + dz * dz <= policeCollisionRange2) this._resolveCarPair(a, b);
       }
       for (const t of this.traffic) {
-        if (t?.mesh?.visible) this._resolveCarPair(a, t);
+        if (!t?.mesh?.visible) continue;
+        const dx = a.mesh.position.x - t.mesh.position.x;
+        const dz = a.mesh.position.z - t.mesh.position.z;
+        if (dx * dx + dz * dz <= policeCollisionRange2) this._resolveCarPair(a, t);
       }
       this._resolvePlayerCollision(a, playerMesh, playerController);
     }

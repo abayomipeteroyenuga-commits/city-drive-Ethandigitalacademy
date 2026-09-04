@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 700" role="img" aria-label="Glossy exotic sports car">
+<defs>
+  <linearGradient id="paint" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ff3b3b"/><stop offset=".28" stop-color="#b40018"/><stop offset=".58" stop-color="#ff182c"/><stop offset="1" stop-color="#4d0010"/></linearGradient>
+  <linearGradient id="paint2" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ff8a8a" stop-opacity=".9"/><stop offset=".35" stop-color="#d10b24"/><stop offset="1" stop-color="#5b0010"/></linearGradient>
+  <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#bfe9ff" stop-opacity=".65"/><stop offset=".32" stop-color="#173a58" stop-opacity=".95"/><stop offset="1" stop-color="#02070d"/></linearGradient>
+  <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f5f7fa"/><stop offset=".35" stop-color="#7b8794"/><stop offset=".62" stop-color="#202832"/><stop offset="1" stop-color="#aeb8c3"/></linearGradient>
+  <radialGradient id="rim"><stop stop-color="#dce3ea"/><stop offset=".55" stop-color="#4b5662"/><stop offset=".58" stop-color="#11151b"/><stop offset="1" stop-color="#020305"/></radialGradient>
+  <filter id="glow"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<!-- rear wing -->
+<path d="M925 257 C1035 225 1160 230 1240 264 L1226 292 C1120 274 1022 278 932 298Z" fill="#090c12" stroke="#7c8995" stroke-width="5"/>
+<path d="M960 255 L972 207 M1200 258 L1210 213" stroke="#151b22" stroke-width="16" stroke-linecap="round"/>
+<!-- main sculpted body -->
+<path d="M185 500 C205 427 278 383 380 365 C450 352 494 289 574 249 C668 202 815 190 927 220 C1017 244 1086 297 1148 344 C1202 385 1274 401 1300 456 L1287 511 C1240 539 1170 551 1084 556 L340 556 C267 553 211 536 185 500Z" fill="url(#paint)" stroke="#33000a" stroke-width="8"/>
+<!-- roof/cabin -->
+<path d="M458 365 C512 286 574 241 662 224 C752 207 861 212 923 237 C974 257 1020 301 1058 347 L1080 377 L468 382Z" fill="url(#glass)" stroke="#1b2733" stroke-width="7"/>
+<path d="M671 226 L688 368 M925 239 L896 369" stroke="#92abc0" stroke-opacity=".45" stroke-width="5"/>
+<path d="M535 316 C624 266 761 239 870 253" fill="none" stroke="#d8f1ff" stroke-opacity=".42" stroke-width="9" stroke-linecap="round"/>
+<!-- hood highlight -->
+<path d="M381 390 C540 359 772 361 1007 378 C1084 384 1142 404 1188 438 C1030 421 891 425 735 442 C581 458 458 457 350 437Z" fill="url(#paint2)" opacity=".92"/>
+<path d="M366 397 C557 363 824 365 1056 389" fill="none" stroke="#ffb0b6" stroke-opacity=".48" stroke-width="8" stroke-linecap="round"/>
+<!-- side sculpting -->
+<path d="M200 472 C385 447 518 474 686 493 C860 513 1040 484 1284 457 L1280 506 C1091 538 896 549 674 529 C476 511 324 509 205 494Z" fill="#700012" opacity=".68"/>
+<path d="M300 459 C430 432 559 447 690 471 C860 501 1030 474 1218 448" fill="none" stroke="#ff6b73" stroke-opacity=".35" stroke-width="7"/>
+<!-- front fascia -->
+<path d="M1010 391 C1117 385 1247 409 1294 456 L1284 510 C1240 531 1180 541 1108 544 L1030 527 C1060 493 1062 444 1010 391Z" fill="#670011" opacity=".9"/>
+<path d="M1120 430 L1272 455 L1245 492 L1130 487Z" fill="#05070b" stroke="#26313b" stroke-width="5"/>
+<path d="M1152 451 L1245 461" stroke="#e6edf4" stroke-opacity=".4" stroke-width="4"/>
+<!-- headlights -->
+<path d="M1060 379 C1118 385 1168 399 1207 419 L1160 433 L1082 418Z" fill="#dff9ff" filter="url(#glow)"/>
+<path d="M1068 387 L1155 414" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+<path d="M1210 417 L1262 441 L1226 448 L1184 431Z" fill="#dff9ff" filter="url(#glow)"/>
+<!-- lower aero -->
+<path d="M1017 519 C1097 532 1202 523 1280 494 L1268 536 C1193 567 1092 579 1012 556Z" fill="#070a0e"/>
+<path d="M1060 547 C1144 555 1218 542 1260 523" fill="none" stroke="#dce5ed" stroke-opacity=".5" stroke-width="5"/>
+<!-- wheels -->
+<g transform="translate(377 520)"><ellipse rx="93" ry="105" fill="#020306" stroke="#121821" stroke-width="12"/><ellipse rx="70" ry="81" fill="url(#rim)" stroke="#8d9aa7" stroke-width="5"/><ellipse rx="30" ry="35" fill="#151b23" stroke="#c7d0d8" stroke-width="5"/><g stroke="#cbd3db" stroke-width="4" opacity=".75"><path d="M0-33V33M-28-17L28 17M-28 17L28-17"/></g></g>
+<g transform="translate(1080 526)"><ellipse rx="93" ry="105" fill="#020306" stroke="#121821" stroke-width="12"/><ellipse rx="70" ry="81" fill="url(#rim)" stroke="#8d9aa7" stroke-width="5"/><ellipse rx="30" ry="35" fill="#151b23" stroke="#c7d0d8" stroke-width="5"/><g stroke="#cbd3db" stroke-width="4" opacity=".75"><path d="M0-33V33M-28-17L28 17M-28 17L28-17"/></g></g>
+<!-- wheel arches -->
+<path d="M279 501 C292 424 346 398 405 404 C463 410 497 450 496 508" fill="none" stroke="#320009" stroke-width="25"/>
+<path d="M980 506 C991 426 1044 397 1106 405 C1167 413 1200 453 1200 514" fill="none" stroke="#320009" stroke-width="25"/>
+<!-- mirror -->
+<path d="M946 347 C982 328 1016 332 1027 350 C1012 366 985 371 954 363Z" fill="url(#metal)" stroke="#161d25" stroke-width="5"/>
+<!-- sharp side intake -->
+<path d="M739 438 C806 430 878 430 930 442 L871 481 L773 469Z" fill="#05080c" stroke="#394550" stroke-width="5"/>
+<path d="M785 448 L883 449" stroke="#ff4b58" stroke-width="4" opacity=".7"/>
+<!-- paint reflections -->
+<path d="M238 421 C425 341 699 312 1000 354" fill="none" stroke="#fff" stroke-opacity=".26" stroke-width="13" stroke-linecap="round"/>
+<path d="M520 282 C684 222 842 229 936 263" fill="none" stroke="#fff" stroke-opacity=".2" stroke-width="10" stroke-linecap="round"/>
+</svg>

@@ -24,8 +24,7 @@ async function boot() {
   ui.hideLoading();
   wireMenu();
   wireMainMenuKeys();
-  // DIRECT RACING START: boot straight into the selected car on an open-road starting grid.
-  // Vehicle selection remains available later from the garage; it is not the first screen.
+  // Boot into the cinematic CITY DRIVE presentation; vehicle selection follows START CITY DRIVE.
   const first = ensureGame();
   if (window.CityDriveWowMenu) {
     const mm=document.getElementById('main-menu'); if(mm) mm.classList.add('hidden');

@@ -13,7 +13,7 @@
   background: rgba(8, 10, 20, 0.85);
   border: 1px solid rgba(0, 212, 255, 0.25);
   border-radius: 12px;
-  padding: 14px 16px;
+  padding: 9px 11px;
   text-align: center;
 }
 
@@ -148,22 +148,26 @@
   top: 48px;
   left: 24px;
   transform: none;
-  width: min(400px, calc(50vw - 42px));
-  min-width: 280px;
-  aspect-ratio: 4 / 5;
+  width: min(300px, calc(38vw - 34px));
+  min-width: 0;
+  height: 158px;
+  max-height: 158px;
   box-sizing: border-box;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  gap: 4px;
   justify-content: flex-start;
   background: rgba(8, 10, 20, 0.9);
   border: 1px solid rgba(0, 212, 255, 0.3);
   border-radius: 12px;
-  padding: 14px 16px;
+  padding: 11px 12px;
   text-align: left;
 }
 
 #mission-title {
+  flex:0 0 auto;
+  overflow-wrap:anywhere;
   font-weight: 800;
   font-size: 0.72rem;
   letter-spacing: .16em;
@@ -173,16 +177,42 @@
 }
 
 #mission-objective {
+  flex:0 0 auto;
+  overflow-wrap:anywhere;
   font-size: 1rem;
   font-weight: 700;
   color: #c0c8d8;
 }
 
 #mission-distance {
+  flex:0 0 auto;
+  overflow-wrap:anywhere;
   font-size: 0.8rem;
   color: #8a9aaa;
   margin-top: 4px;
 }
+
+#mission-timer{
+  flex:0 0 auto;
+  width:100%;
+  box-sizing:border-box;
+  margin-top:2px;
+  padding:6px 8px;
+  border:1px solid rgba(255,204,51,.45);
+  border-radius:9px;
+  background:rgba(255,204,51,.08);
+  color:#ffcc33;
+  font-size:.78rem;
+  line-height:1.15;
+  font-weight:950;
+  letter-spacing:.08em;
+  text-align:center;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#mission-timer.urgent{color:#ff5a5a;border-color:rgba(255,90,90,.6);background:rgba(255,90,90,.1);animation:missionTimerPulse 1s ease-in-out infinite}
+@keyframes missionTimerPulse{50%{transform:scale(1.015)}}
 
 #minimap-container {
   position: absolute;
@@ -230,9 +260,9 @@
 }
 
 #mp-board .you { color: #00ff9d; font-weight: 700; }
-#mission-help{font-size:.68rem;color:#7fd8ff;margin-top:7px;letter-spacing:.06em;font-weight:700}
+#mission-help{flex:0 0 auto;font-size:.68rem;color:#7fd8ff;margin-top:2px;letter-spacing:.06em;font-weight:700;line-height:1.35;overflow-wrap:anywhere;word-break:break-word}
 
-#mission-reward{margin-top:5px;font-size:.72rem;font-weight:800;color:#00ff9d;letter-spacing:.04em}
+#mission-reward{flex:0 0 auto;margin-top:2px;font-size:.72rem;font-weight:800;color:#00ff9d;letter-spacing:.04em;line-height:1.35;overflow-wrap:anywhere;word-break:break-word}
 .campaign-brief{display:flex;flex-direction:column;gap:8px}
 .campaign-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px}
 .mission-card.campaign-active{border-color:#00ff9d;box-shadow:0 0 18px rgba(0,255,157,.12)}
@@ -298,8 +328,8 @@
 
 /* CITY DRIVE mission timer card: compact 4:5 portrait panel with contained content */
 @media(max-width:760px){
-  #mission-panel{top:54px;left:14px;width:min(340px,calc(100vw - 28px));min-width:0;aspect-ratio:4/5;padding:12px 14px;overflow-y:auto;}
+  #mission-panel{top:54px;left:14px;width:min(280px,calc(100vw - 28px));min-width:0;height:150px;max-height:150px;padding:8px 10px;overflow:hidden;}
 }
 @media(max-height:600px){
-  #mission-panel{top:42px;width:min(360px,calc(50vw - 34px));aspect-ratio:4/5;padding:10px 13px;}
+  #mission-panel{top:42px;width:min(300px,calc(50vw - 34px));aspect-ratio:3/4;padding:6px 8px;}
 }

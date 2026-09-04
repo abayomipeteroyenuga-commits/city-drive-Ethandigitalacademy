@@ -290,10 +290,18 @@ export class UI {
     const board = this.$('mp-board');
     if (board) {
       if (game.mp?.active) {
-        const rows = game.mp.standings();
-        board.classList.remove('hidden');
-        board.innerHTML = `<strong>RACE ${game.mp.room ? '· ' + game.mp.room : 'LOCAL'}</strong>` +
-          rows.map((r, i) => `<div class="${r.you ? 'you' : ''}">${i + 1}. ${r.name}  CP ${r.cp}</div>`).join('');
+        // Standings do not need to rebuild the entire DOM every render/update.
+        // Refresh at most 4 times per second while the race remains live.
+        const now = performance.now();
+        if (now - _lastMpUiUpdate > 250) {
+          _lastMpUiUpdate = now;
+          const rows = game.mp.standings();
+          board.classList.remove('hidden');
+          board.innerHTML = `<strong>RACE ${game.mp.room ? '· ' + game.mp.room : 'LOCAL'}</strong>` +
+            rows.map((r, i) => `<div class="${r.you ? 'you' : ''}">${i + 1}. ${r.name}  CP ${r.cp}</div>`).join('');
+        } else {
+          board.classList.remove('hidden');
+        }
       } else {
         board.classList.add('hidden');
       }
@@ -550,7 +558,7 @@ export class UI {
         <button class="menu-btn primary" data-buy="${v.id}">BUY VEHICLE</button>
       </div>`).join('');
     this._dealIndex = 0;
-    this.openPanel(dealer.name || 'DEALERSHIP', `<div class="dealer-hero"><strong>CHOOSE YOUR RIDE</strong><span>15 modern vehicles • Cars • SUVs • Power Bikes • Commercial</span></div><p style="color:#8aa;font-size:.8rem;margin-bottom:8px">← → browse · Enter select · B buy · T test drive · Esc exit</p>` + cards);
+    this.openPanel(dealer.name || 'DEALERSHIP', `<div class="dealer-hero"><strong>CHOOSE YOUR RIDE</strong><span>15 modern vehicles • Cars • SUVs • Commercial</span></div><p style="color:#8aa;font-size:.8rem;margin-bottom:8px">← → browse · Enter select · B buy · T test drive · Esc exit</p>` + cards);
     this.$('ui-panels').querySelectorAll('[data-buy]').forEach(b => {
       b.onclick = () => {
         if (game.buyVehicle(b.dataset.buy)) this.closePanel();
@@ -591,6 +599,17 @@ export class UI {
     this.openPanel('VEHICLE MARKETPLACE', cards);
     this.$('ui-panels').querySelectorAll('[data-used]').forEach(b => {
       b.onclick = () => {
+        // Campaign Level 8 is specifically a marketplace objective. Keep the
+        // same physical-location rule as normal vehicle purchases so opening
+        // the pause/menu marketplace cannot bypass the mission.
+        if (game.activeMission?.kind === 'campaign' && game.activeMission.campaignType === 'buy') {
+          const p = game.controller?.mesh?.position;
+          const market = LANDMARKS.find(x => x.id === 'market');
+          if (!p || !market || Math.hypot(p.x - market.x, p.z - market.z) > 18) {
+            this.toast('DRIVE TO THE VEHICLE MARKETPLACE FIRST');
+            return;
+          }
+        }
         const base = getVehicleById(b.dataset.used);
         const price = +b.dataset.price;
         if (!base) { this.toast('Vehicle unavailable'); return; }

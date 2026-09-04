@@ -40,26 +40,26 @@ export const CAMPAIGN_MISSIONS = [
 // Campaign destinations are fixed to road-accessible approach points, not building centers.
 // This prevents the GPS from sending the player into a landmark's solid building mesh.
 export const CAMPAIGN_DESTINATIONS = {
-  1:  { name: 'Central Mall — OPEN ROAD DROP ZONE', x: -80, z: 0 },
+  1:  { name: 'Central Mall — OPEN ROAD DROP ZONE', x: -40, z: 30 },
   2:  { name: 'Courier Depot — OPEN ROAD PICKUP', x: -80, z: 80 },
-  3:  { name: 'Main Garage — OPEN SERVICE ROAD', x: 0, z: -80 },
-  4:  { name: 'Airport — OPEN TERMINAL ROAD', x: -240, z: 0 },
+  3:  { name: 'Main Garage — OPEN SERVICE ROAD', x: 40, z: -60 },
+  4:  { name: 'Airport — OPEN TERMINAL ROAD', x: -280, z: -80 },
   5:  { name: 'Street Race — OPEN START GRID', x: 0, z: -160 },
   6:  { name: 'Food Hub — OPEN PICKUP ROAD', x: -80, z: 80 },
-  7:  { name: 'Grand Hotel — OPEN ACCESS ROAD', x: 0, z: 160 },
-  8:  { name: 'Vehicle Marketplace — OPEN ACCESS ROAD', x: -80, z: 0 },
+  7:  { name: 'Grand Hotel — OPEN ACCESS ROAD', x: 10, z: 240 },
+  8:  { name: 'Vehicle Marketplace — OPEN ACCESS ROAD', x: -70, z: 10 },
   9:  { name: 'Circuit Race — Starting Grid', x: -160, z: -160 },
-  10: { name: 'Nova Tower — OPEN CITY ROAD', x: 0, z: 0 },
+  10: { name: 'Nova Tower — OPEN CITY ROAD', x: 20, z: 10 },
   11: { name: 'VIP Lounge — OPEN PICKUP ROAD', x: 0, z: -80 },
   12: { name: 'Highway Sprint — OPEN HIGHWAY START', x: -240, z: 0 },
-  13: { name: 'Vehicle Marketplace — OPEN ACCESS ROAD', x: -80, z: 0 },
+  13: { name: 'Vehicle Marketplace — OPEN ACCESS ROAD', x: -70, z: 10 },
   14: { name: 'Off-Road Center — OPEN DIRT PAD', x: 320, z: -240 },
-  15: { name: 'Nova Stadium — OPEN NORTH ROAD', x: 160, z: 0 },
+  15: { name: 'Nova Stadium — OPEN NORTH ROAD', x: 120, z: -40 },
   16: { name: 'Supercar Race — OPEN START GRID', x: 80, z: 80 },
-  17: { name: 'Riverside Bridge — OPEN ROAD ENTRANCE', x: 0, z: 160 },
+  17: { name: 'Riverside Bridge — OPEN ROAD ENTRANCE', x: 0, z: 140 },
   18: { name: 'Recovery Yard — OPEN ACCESS ROAD', x: 80, z: -160 },
   19: { name: 'Time Trial — OPEN START GRID', x: -80, z: -160 },
-  20: { name: 'Nova Tower — FINAL OPEN CITY ROAD', x: 0, z: 0 }
+  20: { name: 'Nova Tower — FINAL OPEN CITY ROAD', x: 20, z: 10 }
 };
 
 export function getCampaignDestination(level) {
