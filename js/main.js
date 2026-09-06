@@ -138,27 +138,3 @@ boot().catch((err) => {
   if (text) text.innerHTML = 'CITY DRIVE could not start.<br><small>' + String(err?.message || err).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</small>';
   if (box) box.classList.remove('hidden');
 });
-
-
-/* Driving audio hooks added by audit patch */
-(function(){
-  let lastAudioTick = 0;
-  function audioTick(now){
-    if (now - lastAudioTick < 33) { requestAnimationFrame(audioTick); return; }
-    lastAudioTick = now;
-    try {
-      if (!window.DriveAudio) return;
-      const v = window.vehicle || window.car || window.playerCar || window.player;
-      let speed = 0, throttle = 0, skid = false;
-      if (v) {
-        speed = Number(v.speed ?? v.velocity?.length?.() ?? 0) || 0;
-        throttle = Number(v.throttle ?? v.acceleration ?? 0) || 0;
-        skid = !!(v.skidding ?? v.isDrifting ?? v.handbrake);
-      }
-      window.DriveAudio.update(speed, throttle, skid);
-    } catch(e) {}
-    requestAnimationFrame(audioTick);
-  }
-  requestAnimationFrame(audioTick);
-  window.addEventListener('keydown', e => { if (e.code === 'Space' || e.key.toLowerCase() === 'h') window.DriveAudio && window.DriveAudio.horn(); });
-})();

@@ -527,12 +527,15 @@ export class World {
       return tmin >= 0 && tmin <= 1 ? { t: tmin } : null;
     };
 
-    const candidates = [];
-    for (const b of this.buildings) candidates.push({ shape:'box', x:b.x, z:b.z, hx:b.w/2, hz:b.d/2, type:'building' });
-    candidates.push(...this.staticColliders);
-
+    // Hot path: do not allocate a combined collider array every frame.
+    // Check buildings and static colliders in-place to reduce mobile GC stutter.
     let best = null;
-    for (const c of candidates) {
+    for (const b of this.buildings) {
+      const c = { shape:'box', x:b.x, z:b.z, hx:b.w/2, hz:b.d/2, type:'building' };
+      const hit = sweepBox(c);
+      if (hit && (!best || hit.t < best.hit.t)) best = { c, hit };
+    }
+    for (const c of this.staticColliders) {
       const hit = c.shape === 'circle' ? sweepCircle(c) : sweepBox(c);
       if (hit && (!best || hit.t < best.hit.t)) best = { c, hit };
     }

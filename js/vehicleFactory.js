@@ -13,7 +13,11 @@ function wheel(g,x,y,z,r=.34,w=.24){
   const hub=mesh(new THREE.CylinderGeometry(r*.42,r*.42,w*.75,12),mat(0xc3c8ce,.2,.9),x,y,z); hub.rotation.z=Math.PI/2; g.add(hub);
   const cap=mesh(new THREE.CylinderGeometry(r*.15,r*.15,w*.82,12),mat(0x252a31,.25,.85),x,y,z); cap.rotation.z=Math.PI/2; g.add(cap);
 }
-function wheels4(g,w,l,r=.34,y=.34){ for(const x of [-w*.47,w*.47]) for(const z of [-l*.32,l*.32]) wheel(g,x,y,z,r,.25); }
+function wheels4(g,w,l,r=.34,y=.34){
+  // Four clearly visible road wheels: front-left, front-right, rear-left, rear-right.
+  // Push them slightly outside the body so none disappear inside the bodywork.
+  for(const x of [-w*.53,w*.53]) for(const z of [-l*.34,l*.34]) wheel(g,x,y,z,r,.28);
+}
 function windows(g,w,l,roofY=1.0){
   const glass=mat(0x101c2b,.12,.72,0x07111d,.25);
   g.add(mesh(new THREE.BoxGeometry(w*.78,.04,l*.42),glass,0,roofY,-.12));
@@ -24,6 +28,9 @@ function lights(g,w,l){
   const head=mat(0xeaf8ff,.12,.55,0x7fd8ff,2.4), tail=mat(0xff1728,.2,.35,0xff0010,1.8);
   for(const x of [-w*.32,w*.32]){ g.add(mesh(new THREE.BoxGeometry(.28,.13,.08),head,x,.63,l*.51)); g.add(mesh(new THREE.BoxGeometry(.25,.11,.07),tail,x,.62,-l*.51)); }
   g.add(mesh(new THREE.BoxGeometry(w*.42,.08,.05),mat(0x090b10,.22,.8),0,.59,l*.515));
+  // Strong front-face details so the nose/grille is unmistakable from front and 3/4 views.
+  g.add(mesh(new THREE.BoxGeometry(w*.58,.20,.065),mat(0x111820,.24,.78),0,.48,l*.525));
+  g.add(mesh(new THREE.BoxGeometry(w*.22,.035,.075),mat(0xaeb7c2,.18,.9),0,.49,l*.535));
 }
 function mirrors(g,w,z){ for(const x of [-w*.55,w*.55]) g.add(mesh(new THREE.BoxGeometry(.14,.11,.28),mat(0x11151b,.18,.65),x,1.03,z)); }
 function aero(g,w,l,c,s,sport=false){

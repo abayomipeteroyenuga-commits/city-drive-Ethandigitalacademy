@@ -193,6 +193,11 @@ export class UI {
   }
 
   updateHUD(game) {
+    // DOM-heavy HUD work is capped near 30 FPS. Physics/rendering remain full-rate,
+    // but avoiding dozens of text/style writes at 60-120 FPS reduces mobile lag.
+    const hudNow = performance.now();
+    if (this._lastHudDraw && hudNow - this._lastHudDraw < 33) return;
+    this._lastHudDraw = hudNow;
     const v = game.controller?.def;
     const kmh = game.controller ? Math.abs(game.controller.speed) * 3.6 : 0;
     const vehicleLabel = this.$('vehicle-name-display');

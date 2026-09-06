@@ -266,8 +266,21 @@ export class Game {
     this.state.completedRaces = data.completedRaces || [];
     const loadedCampaignLevel = Number(data.player?.campaignLevel);
     this.state.player.campaignLevel = Number.isFinite(loadedCampaignLevel) ? Math.trunc(loadedCampaignLevel) : 1;
-    this.state.player.campaignCompleted = Array.isArray(data.player?.campaignCompleted) ? data.player.campaignCompleted.filter(n => Number.isInteger(Number(n)) && Number(n) >= 1 && Number(n) <= CAMPAIGN_MISSIONS.length).map(Number) : [];
-    this.state.player.campaignLevel = Math.min(CAMPAIGN_MISSIONS.length, Math.max(1, this.state.player.campaignLevel));
+    // Normalize campaign progress from the authoritative completed-level set.
+    // Saves can come from older builds, interrupted writes, or manually edited
+    // storage, so never trust campaignLevel by itself and never let holes such
+    // as [1,3] unlock Level 4. Only contiguous completion from Level 1 counts.
+    const completedSet = new Set(
+      (Array.isArray(data.player?.campaignCompleted) ? data.player.campaignCompleted : [])
+        .map(Number)
+        .filter(n => Number.isInteger(n) && n >= 1 && n <= CAMPAIGN_MISSIONS.length)
+    );
+    this.state.player.campaignCompleted = [...completedSet].sort((a, b) => a - b);
+    let firstIncomplete = 1;
+    while (firstIncomplete <= CAMPAIGN_MISSIONS.length && completedSet.has(firstIncomplete)) firstIncomplete++;
+    this.state.player.campaignLevel = firstIncomplete > CAMPAIGN_MISSIONS.length
+      ? CAMPAIGN_MISSIONS.length
+      : firstIncomplete;
     this.state.player.daily = { ...(this.state.player.daily || {}), ...(data.player?.daily || {}) };
     if (!Array.isArray(this.state.player.daily.districtsVisited)) this.state.player.daily.districtsVisited = [];
     const dailyCash = Number(this.state.player.daily.cashEarned);
@@ -367,12 +380,15 @@ export class Game {
     if (this._menuPreviewMesh) { this.scene.remove(this._menuPreviewMesh); this._disposeObject3D(this._menuPreviewMesh); this._menuPreviewMesh = null; }
     const mesh = createVehicleMesh(def);
     mesh.position.set(0, 0.05, 0);
-    mesh.rotation.y = Math.PI;
+    // Face the vehicle toward the showroom camera. The old PI rotation showed
+    // mostly the rear; this front-three-quarter pose exposes the grille, lamps
+    // and both near-side wheels immediately.
+    mesh.rotation.y = -0.18;
     this.scene.add(mesh);
     this._menuPreviewMesh = mesh;
     this._menuPreviewDef = def;
-    this.camera.position.set(8.5, 3.7, 10.5);
-    this.camera.lookAt(0, 1.0, 0);
+    this.camera.position.set(7.2, 3.15, 9.2);
+    this.camera.lookAt(0, 0.92, 0.35);
     this.ui.showGame();
     this.ui.setVehicleSelectionMode(true);
   }
@@ -606,7 +622,7 @@ export class Game {
     this.ui.updateHUD(this);
     if (this._saveTimer === undefined) this._saveTimer = 0;
     this._saveTimer += dt;
-    if (this._saveTimer > 8) { this.persist(); this._saveTimer = 0; }
+    if (this._saveTimer > 15) { this.persist(); this._saveTimer = 0; }
   }
 
   _walk(dt, input) {
@@ -1048,12 +1064,14 @@ export class Game {
     if (!this.state.player.campaignCompleted.includes(m.level)) this.state.player.campaignCompleted.push(m.level);
     // Campaign progression is sequential and authoritative: completing Level N
     // immediately unlocks Level N+1, independent of the player's XP/rank level.
-    const unlocked = this.state.player.campaignCompleted.reduce((max, n) => {
-      const level = Number(n);
-      return Number.isInteger(level) && level === max + 1 ? level + 1 : max;
-    }, 1);
-    const nextUnlocked = Math.min(CAMPAIGN_MISSIONS.length, Math.max(1, unlocked));
-    this.state.player.campaignLevel = Math.max(this.state.player.campaignLevel || 1, nextUnlocked);
+    // Derive the unlock from contiguous completed levels only. This prevents
+    // corrupted/out-of-order completion arrays from skipping campaign levels.
+    const completedSet = new Set(this.state.player.campaignCompleted.map(Number));
+    let nextUnlocked = 1;
+    while (nextUnlocked <= CAMPAIGN_MISSIONS.length && completedSet.has(nextUnlocked)) nextUnlocked++;
+    this.state.player.campaignLevel = nextUnlocked > CAMPAIGN_MISSIONS.length
+      ? CAMPAIGN_MISSIONS.length
+      : nextUnlocked;
     this.state.player.missionsCompleted++;
     this._earn(m.reward);
     this.state.player.xp += m.xp;
