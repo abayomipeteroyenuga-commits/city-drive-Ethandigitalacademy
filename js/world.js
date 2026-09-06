@@ -74,6 +74,9 @@ export class World {
   constructor(scene) {
     this.scene = scene;
     this.buildings = [];
+    // Solid scenery colliders (poles, lamps, trees, signs, benches, planters, etc.).
+    // Visual objects must register here or the player's car can pass through them.
+    this.staticColliders = [];
     this.roadBoxes = [];
     this.lights = [];
     this.trafficLights = [];
@@ -82,6 +85,14 @@ export class World {
     this.weather = 'clear';
     this.sun = null;
     this.hemi = null;
+  }
+
+  addCircleCollider(x, z, r, type = 'scenery') {
+    this.staticColliders.push({ shape: 'circle', x, z, r, type });
+  }
+
+  addBoxCollider(x, z, hx, hz, type = 'scenery') {
+    this.staticColliders.push({ shape: 'box', x, z, hx, hz, type });
   }
 
   build() {
@@ -112,9 +123,10 @@ export class World {
       const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.22,.34,3.2,8),trunkMat); trunk.position.y=1.6; g.add(trunk);
       for(let i=0;i<7;i++){ const leaf=new THREE.Mesh(new THREE.BoxGeometry(.14,.08,2.0),leafMat); leaf.position.y=3.25; leaf.rotation.y=i*Math.PI*2/7; leaf.rotation.x=-0.35; leaf.position.x=Math.sin(i*Math.PI*2/7)*.55; leaf.position.z=Math.cos(i*Math.PI*2/7)*.55; g.add(leaf); }
       this.scene.add(g);
+      this.addCircleCollider(x, z, 0.58 * scale, 'palm');
     };
-    const addLamp=(x,z)=>{ const g=new THREE.Group(); g.position.set(x,0,z); const pole=new THREE.Mesh(new THREE.CylinderGeometry(.07,.1,4.2,8),lampMat); pole.position.y=2.1; g.add(pole); const bulb=new THREE.Mesh(new THREE.SphereGeometry(.13,8,8),glowMat); bulb.position.y=4.2; g.add(bulb); this.scene.add(g); };
-    const addBanner=(x,z,rot=0)=>{ const g=new THREE.Group(); g.position.set(x,0,z); g.rotation.y=rot; const p1=new THREE.Mesh(new THREE.CylinderGeometry(.05,.06,3.1,6),lampMat); const p2=p1.clone(); p1.position.set(-2,1.55,0); p2.position.set(2,1.55,0); const b=new THREE.Mesh(new THREE.BoxGeometry(4,.75,.06),bannerMat); b.position.y=2.65; g.add(p1,p2,b); this.scene.add(g); };
+    const addLamp=(x,z)=>{ const g=new THREE.Group(); g.position.set(x,0,z); const pole=new THREE.Mesh(new THREE.CylinderGeometry(.07,.1,4.2,8),lampMat); pole.position.y=2.1; g.add(pole); const bulb=new THREE.Mesh(new THREE.SphereGeometry(.13,8,8),glowMat); bulb.position.y=4.2; g.add(bulb); this.scene.add(g); this.addCircleCollider(x, z, .38, 'street-light'); };
+    const addBanner=(x,z,rot=0)=>{ const g=new THREE.Group(); g.position.set(x,0,z); g.rotation.y=rot; const p1=new THREE.Mesh(new THREE.CylinderGeometry(.05,.06,3.1,6),lampMat); const p2=p1.clone(); p1.position.set(-2,1.55,0); p2.position.set(2,1.55,0); const b=new THREE.Mesh(new THREE.BoxGeometry(4,.75,.06),bannerMat); b.position.y=2.65; g.add(p1,p2,b); this.scene.add(g); const c=Math.cos(rot), sn=Math.sin(rot); for(const lx of [-2,2]) this.addCircleCollider(x + lx*c, z - lx*sn, .34, 'banner-post'); };
     // Waterfront palms and resort boulevard.
     [[-80,245],[0,245],[80,245],[-120,265],[120,265]].forEach(v=>addPalm(v[0],v[1],1.05));
     // Green spaces around major open-road areas.
@@ -131,6 +143,7 @@ export class World {
       const panel=new THREE.Mesh(new THREE.BoxGeometry(textWidth,1.35,.12),signMat); panel.position.y=3.55;
       const edge=new THREE.Mesh(new THREE.BoxGeometry(textWidth-.3,1.05,.035),signGlow); edge.position.set(0,3.55,.075);
       g.add(post,panel,edge); this.scene.add(g);
+      this.addCircleCollider(x, z, .38, 'digital-sign');
     };
     [[-120,48,0],[120,48,Math.PI],[200,-8,Math.PI/2],[-200,-8,-Math.PI/2],[160,208,Math.PI]].forEach(v=>addDigitalSign(...v));
     // Scenic arches at the beachfront and race approach. They sit beside lanes, never in them.
@@ -138,13 +151,14 @@ export class World {
     const neonMat=new THREE.MeshStandardMaterial({color:0xff5bd6,emissive:0xff27c7,emissiveIntensity:1.5});
     const addArch=(x,z,rot=0)=>{ const g=new THREE.Group(); g.position.set(x,0,z); g.rotation.y=rot;
       const a=new THREE.Mesh(new THREE.BoxGeometry(.45,6,.45),archMat), b=a.clone(), top=new THREE.Mesh(new THREE.BoxGeometry(12,.45,.45),neonMat);
-      a.position.set(-6,3,0); b.position.set(6,3,0); top.position.set(0,6,0); g.add(a,b,top); this.scene.add(g); };
+      a.position.set(-6,3,0); b.position.set(6,3,0); top.position.set(0,6,0); g.add(a,b,top); this.scene.add(g); const c=Math.cos(rot), sn=Math.sin(rot); for(const lx of [-6,6]) this.addCircleCollider(x + lx*c, z - lx*sn, .55, 'arch-support'); };
     addArch(0,232,Math.PI/2); addArch(-120,-120,0);
     // Decorative fountain/park pads: animated water rings, deliberately offset from roads.
     const waterMat=new THREE.MeshStandardMaterial({color:0x43c7e8,transparent:true,opacity:.72,metalness:.2,roughness:.18,emissive:0x083b4b,emissiveIntensity:.25});
     [[-150,125],[205,105]].forEach(([x,z])=>{
       const basin=new THREE.Mesh(new THREE.CylinderGeometry(5.2,5.2,.18,32),signMat); basin.position.set(x,.09,z); this.scene.add(basin);
       const water=new THREE.Mesh(new THREE.CylinderGeometry(4.7,4.7,.035,32),waterMat); water.position.set(x,.2,z); water.userData.scenicWater=true; this.scene.add(water);
+      this.addCircleCollider(x, z, 5.25, 'fountain');
     });
     // Small roadside planters make the city feel lived-in without blocking traffic lanes.
     const planterMat=new THREE.MeshStandardMaterial({color:0x343a40,roughness:.9});
@@ -153,6 +167,7 @@ export class World {
       if(Math.abs(x%80)<12 || Math.abs(z%80)<12) continue;
       const pot=new THREE.Mesh(new THREE.CylinderGeometry(.5,.65,.55,10),planterMat); pot.position.set(x,.28,z); this.scene.add(pot);
       const shrub=new THREE.Mesh(new THREE.SphereGeometry(.48,8,7),leafMat); shrub.position.set(x,.78,z); this.scene.add(shrub);
+      this.addCircleCollider(x, z, .68, 'planter');
     }
   }
 
@@ -171,6 +186,7 @@ export class World {
         const px = x + sx * 9, pz = z + sz * 9;
         const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.15, 5.8, 8), housing);
         pole.position.set(px, 2.9, pz); this.scene.add(pole);
+        this.addCircleCollider(px, pz, 0.46, 'traffic-light');
         const arm = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 5.8), housing);
         arm.position.set(px, 5.65, z + sz * 3); this.scene.add(arm);
         const head = new THREE.Group();
@@ -247,14 +263,17 @@ export class World {
     ground.receiveShadow = true;
     this.scene.add(ground);
 
-    const asphalt = new THREE.Mesh(
-      new THREE.PlaneGeometry(900, 900),
-      new THREE.MeshStandardMaterial({ color: 0x2a2c32, roughness: 0.9 })
+    // Keep the open city visually readable: terrain stays green while actual roads
+    // provide the asphalt. The previous full-city asphalt sheet made every block
+    // look like one flat grey parking lot.
+    const cityBase = new THREE.Mesh(
+      new THREE.PlaneGeometry(860, 820),
+      new THREE.MeshStandardMaterial({ color: 0x304a32, roughness: 0.98 })
     );
-    asphalt.rotation.x = -Math.PI / 2;
-    asphalt.position.y = 0.02;
-    asphalt.receiveShadow = true;
-    this.scene.add(asphalt);
+    cityBase.rotation.x = -Math.PI / 2;
+    cityBase.position.set(0, 0.012, -10);
+    cityBase.receiveShadow = true;
+    this.scene.add(cityBase);
   }
 
   _roads() {
@@ -298,9 +317,20 @@ export class World {
         const d = new THREE.Mesh(new THREE.BoxGeometry(10,0.012,0.18), dashMat); d.position.set(x,0.085,i*80); this.scene.add(d);
       }
     }
+    // Bright road-edge lines give the open city stronger depth and lane definition.
+    const edgeMat = new THREE.MeshBasicMaterial({ color: 0xf2f4f7, transparent: true, opacity: 0.72 });
+    for (let i = -4; i <= 4; i++) {
+      for (const side of [-1, 1]) {
+        const v = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.012, 700), edgeMat);
+        v.position.set(i * 80 + side * 6.72, 0.087, 0); this.scene.add(v);
+        const h = new THREE.Mesh(new THREE.BoxGeometry(700, 0.012, 0.12), edgeMat);
+        h.position.set(0, 0.087, i * 80 + side * 6.72); this.scene.add(h);
+      }
+    }
     for (const [x,z] of [[-8,-8],[72,-8],[-8,72],[72,72],[152,72],[152,-8]]) {
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.12,5.5,8), new THREE.MeshStandardMaterial({color:0x30343c,metalness:0.7,roughness:0.3}));
       pole.position.set(x,2.75,z); this.scene.add(pole);
+      this.addCircleCollider(x, z, 0.42, 'street-light');
       const lamp = new THREE.PointLight(0xffdca8, 1.2, 22, 2); lamp.position.set(x,5.5,z); this.scene.add(lamp);
     }
     // mountain dirt
@@ -365,6 +395,7 @@ export class World {
       const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.18*scale,.25*scale,2.2*scale,8),trunkMat); trunk.position.y=1.1*scale; trunk.castShadow=true; g.add(trunk);
       const crown=new THREE.Mesh(new THREE.IcosahedronGeometry(1.15*scale,1),leafMat); crown.position.y=2.45*scale; crown.castShadow=true; g.add(crown);
       g.position.set(x,0,z); this.scene.add(g);
+      this.addCircleCollider(x, z, Math.max(0.55, 0.48 * scale), 'tree');
     };
     for (const [x,z] of [[125,25],[145,70],[185,10],[220,45],[250,120],[290,100],[330,140],[-230,210],[-270,250],[-310,190],[-340,250]]) addTree(x,z,.8+((Math.abs(x)+Math.abs(z))%5)*.07);
     const benchMat=new THREE.MeshStandardMaterial({color:0x5b4433,roughness:.8});
@@ -372,6 +403,7 @@ export class World {
       const seat=new THREE.Mesh(new THREE.BoxGeometry(2.2,.14,.55),benchMat); seat.position.set(x,.65,z); seat.castShadow=true; this.scene.add(seat);
       const a=seat.clone(); a.position.y=.35; a.scale.x=.12; a.scale.z=.8; this.scene.add(a);
       const b=a.clone(); b.position.x+=1.8; this.scene.add(b);
+      this.addBoxCollider(x + 0.9, z, 1.35, 0.48, 'bench');
     }
   }
 
@@ -393,6 +425,7 @@ export class World {
       );
       m.position.set(280 + i * 18, 20, -280 - i * 10);
       this.scene.add(m);
+      this.addCircleCollider(m.position.x, m.position.z, 22 + i * 3.2, 'mountain');
     }
   }
 
@@ -445,29 +478,92 @@ export class World {
 
   resolveVehicleCollision(veh) {
     const p = veh.mesh.position;
-    for (const b of this.buildings) {
-      const adx = Math.abs(p.x - b.x);
-      const adz = Math.abs(p.z - b.z);
-      if (adx > b.w / 2 + 8 || adz > b.d / 2 + 8) continue;
-      const hx = b.w / 2 + 1.2;
-      const hz = b.d / 2 + 1.2;
-      if (Math.abs(p.x - b.x) < hx && Math.abs(p.z - b.z) < hz) {
-        const dx = p.x - b.x;
-        const dz = p.z - b.z;
-        if (Math.abs(dx) / hx > Math.abs(dz) / hz) {
-          p.x = b.x + Math.sign(dx) * hx;
-        } else {
-          p.z = b.z + Math.sign(dz) * hz;
-        }
-        const impact = Math.abs(veh.speed);
-        veh.speed *= -0.25;
-        if (impact > 4) veh.applyDamage(Math.min(18, impact * 0.8));
-        return true;
+    const from = veh.lastPos || p;
+    const carRadius = veh.def?.isMotorcycle ? 0.7 : 1.15;
+    let collided = false;
+
+    const impactResponse = () => {
+      const impact = Math.abs(veh.speed);
+      veh.speed *= -0.12;
+      if (impact > 4) veh.applyDamage(Math.min(18, impact * 0.7));
+      collided = true;
+    };
+
+    // Continuous collision prevents fast cars tunnelling through thin poles,
+    // street lights, trees and signs between rendered frames.
+    const sx = from.x, sz = from.z;
+    const ex = p.x, ez = p.z;
+    const vx = ex - sx, vz = ez - sz;
+    const moveLen2 = vx * vx + vz * vz;
+
+    const sweepCircle = (c) => {
+      const r = c.r + carRadius;
+      const ox = sx - c.x, oz = sz - c.z;
+      if (ox * ox + oz * oz <= r * r) return { t: 0, nx: ox, nz: oz };
+      if (moveLen2 < 1e-9) return null;
+      const b = 2 * (ox * vx + oz * vz);
+      const cc = ox * ox + oz * oz - r * r;
+      const disc = b * b - 4 * moveLen2 * cc;
+      if (disc < 0) return null;
+      const root = Math.sqrt(disc);
+      const t = (-b - root) / (2 * moveLen2);
+      if (t < 0 || t > 1) return null;
+      const hx = sx + vx * t, hz = sz + vz * t;
+      return { t, nx: hx - c.x, nz: hz - c.z };
+    };
+
+    const sweepBox = (c) => {
+      const minX = c.x - c.hx - carRadius, maxX = c.x + c.hx + carRadius;
+      const minZ = c.z - c.hz - carRadius, maxZ = c.z + c.hz + carRadius;
+      if (sx >= minX && sx <= maxX && sz >= minZ && sz <= maxZ) return { t: 0 };
+      let tmin = 0, tmax = 1;
+      for (const [s0, d0, mn, mx] of [[sx, vx, minX, maxX], [sz, vz, minZ, maxZ]]) {
+        if (Math.abs(d0) < 1e-9) { if (s0 < mn || s0 > mx) return null; continue; }
+        let a = (mn - s0) / d0, b = (mx - s0) / d0;
+        if (a > b) [a, b] = [b, a];
+        tmin = Math.max(tmin, a); tmax = Math.min(tmax, b);
+        if (tmin > tmax) return null;
       }
+      return tmin >= 0 && tmin <= 1 ? { t: tmin } : null;
+    };
+
+    const candidates = [];
+    for (const b of this.buildings) candidates.push({ shape:'box', x:b.x, z:b.z, hx:b.w/2, hz:b.d/2, type:'building' });
+    candidates.push(...this.staticColliders);
+
+    let best = null;
+    for (const c of candidates) {
+      const hit = c.shape === 'circle' ? sweepCircle(c) : sweepBox(c);
+      if (hit && (!best || hit.t < best.hit.t)) best = { c, hit };
     }
+
+    if (best) {
+      const tSafe = Math.max(0, best.hit.t - 0.015);
+      p.x = sx + vx * tSafe;
+      p.z = sz + vz * tSafe;
+
+      // If the previous position was already overlapping, push outside now.
+      if (best.hit.t === 0) {
+        const c = best.c;
+        if (c.shape === 'circle') {
+          let dx = p.x - c.x, dz = p.z - c.z;
+          let d = Math.hypot(dx, dz);
+          if (d < 1e-5) { dx = -Math.sin(veh.heading || 0); dz = -Math.cos(veh.heading || 0); d = 1; }
+          const minD = c.r + carRadius + 0.03;
+          p.x = c.x + dx / d * minD; p.z = c.z + dz / d * minD;
+        } else {
+          const hx = c.hx + carRadius + 0.03, hz = c.hz + carRadius + 0.03;
+          const dx = p.x - c.x, dz = p.z - c.z;
+          if (Math.abs(dx) / hx > Math.abs(dz) / hz) p.x = c.x + (dx >= 0 ? hx : -hx);
+          else p.z = c.z + (dz >= 0 ? hz : -hz);
+        }
+      }
+      impactResponse();
+    }
+
     p.x = THREE.MathUtils.clamp(p.x, -420, 420);
     p.z = THREE.MathUtils.clamp(p.z, -400, 380);
-    return false;
+    return collided;
   }
 
   getDistrict(x, z) {
