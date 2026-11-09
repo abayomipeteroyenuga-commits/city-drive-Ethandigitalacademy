@@ -316,7 +316,7 @@ function open(){
    try{ if(g&&typeof g.continueGame==='function'){ g.continueGame(); g.enterWorld(true,{startGrid:true}); el.remove(); } }catch(e){console.error('CITY DRIVE continue error',e);}
  };
 }
-function hasSaveSafe(){ try{return localStorage.getItem('cityDriveSave')||localStorage.getItem('cityDrive_save')||localStorage.getItem('cityDriveState') ? true : false;}catch(e){return false;} }
+function hasSaveSafe(){ try{return !!(localStorage.getItem('citydrive_save_v1')||localStorage.getItem('cityDriveSave')||localStorage.getItem('cityDrive_save')||localStorage.getItem('cityDriveState'));}catch(e){return false;} }
 
 window.CityDriveWowMenu={open:open};
 })();
