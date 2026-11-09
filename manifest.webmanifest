@@ -1,0 +1,24 @@
+{
+  "id": "/",
+  "name": "ETHAN CITY DRIVE",
+  "short_name": "CITY DRIVE",
+  "description": "Open-world 3D driving, racing and city exploration by Ethan Digital Academy.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#07101f",
+  "theme_color": "#0b1c35",
+  "categories": [
+    "games",
+    "entertainment"
+  ],
+  "icons": [
+    {
+      "src": "/city-drive-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
