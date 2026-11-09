@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#0b1c35" />
+  <meta name="description" content="Explore Nova City, race, complete missions and build your garage in ETHAN CITY DRIVE." />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/city-drive-icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/city-drive-icon.svg" />
   <title>CITY DRIVE — Earn • Drive • Explore • Build</title>
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="css/hud.css" />
@@ -178,5 +183,10 @@
 <script src="js/ui.js"></script>
 <script src="js/wowMenu.js"></script>
   <script async src="https://track.ethandigitalacademy.org/ethan-analytics.js" data-ethan-app="ethan-games" data-ethan-public-id="72eca3b0-9e71-4961-b982-91c18a7b294e"></script>
+  <script>
+    if ("serviceWorker" in navigator && location.protocol === "https:") {
+      window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(err => console.warn("CITY DRIVE offline install unavailable:", err)));
+    }
+  </script>
 </body>
 </html>
