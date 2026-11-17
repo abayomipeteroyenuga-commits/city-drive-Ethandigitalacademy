@@ -82,7 +82,9 @@ export function migrateSave(raw) {
       missionsCompleted: (() => { const n = Number(raw.player?.missionsCompleted); return Number.isFinite(n) ? Math.max(0, Math.trunc(n)) : 0; })(),
       campaignLevel: (() => { const n = Number(raw.player?.campaignLevel); return Number.isFinite(n) ? Math.min(20, Math.max(1, Math.trunc(n))) : 1; })(),
       campaignCompleted: Array.isArray(raw.player?.campaignCompleted) ? [...new Set(raw.player.campaignCompleted.map(Number).filter(n => Number.isInteger(n) && n >= 1 && n <= 20))] : [],
+      newGamePlus: (() => { const n = Number(raw.player?.newGamePlus); return Number.isFinite(n) ? Math.min(10, Math.max(0, Math.trunc(n))) : 0; })(),
       daily: raw.player?.daily || null,
+      weekly: raw.player?.weekly && typeof raw.player.weekly === 'object' ? raw.player.weekly : null,
       shop: raw.player?.shop || null,
       rankId: raw.player?.rankId || null
     },
@@ -124,7 +126,9 @@ export function saveGame(state) {
         missionsCompleted: state.player.missionsCompleted,
         campaignLevel: Number(state.player.campaignLevel || 1),
         campaignCompleted: Array.isArray(state.player.campaignCompleted) ? state.player.campaignCompleted : [],
+        newGamePlus: Math.min(10, Math.max(0, Math.trunc(Number(state.player.newGamePlus) || 0))),
         daily: state.player.daily || null,
+        weekly: state.player.weekly || null,
         shop: state.player.shop || null,
         rankId: state._rankId || state.player.rankId || null
       },
