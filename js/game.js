@@ -11,7 +11,7 @@ import { checkAchievements } from './achievements.js';
 import { AudioSystem } from './audio.js';
 import { Settings } from './settings.js';
 import { Multiplayer, makeRoomCode } from './multiplayer.js';
-import { CAMPAIGN_MISSIONS, getCampaignMission, getCampaignColor, getCampaignDestination, getCampaignJobStages, getCampaignRaceCheckpoints, getDailyChallenge, getDailyDateKey } from './missions.js';
+import { CAMPAIGN_MISSIONS, getCampaignMission, getCampaignColor, getCampaignDestination, getCampaignJobStages, getCampaignRaceCheckpoints, getDailyChallenge, getDailyDateKey, getWeeklyChallenge, getWeeklyDateKey } from './missions.js';
 
 const STARTER_GWAGON_GREEN = 0x1f5b3a;
 import { SHOP_ITEMS, getShopItem } from './shop.js';
@@ -99,7 +99,9 @@ export class Game {
         missionsCompleted: 0,
         campaignLevel: 1,
         campaignCompleted: [],
+        newGamePlus: 0,
         daily: { date: '', challengeId: '', completed: false, streak: 0, lastCompletedDate: '', startDistance: 0, startMoney: 50000, cashEarned: 0, districtsVisited: [] },
+        weekly: { date: '', challengeId: '', completed: false, streak: 0, lastCompletedDate: '', startDistance: 0, startJobs: 0, startWins: 0, cashEarned: 0 },
         shop: { owned: ['outfit_city','shoes_city','hair_classic','accessory_none'], equipped: { outfit: 'outfit_city', shoes: 'shoes_city', hair: 'hair_classic', accessory: 'accessory_none' } }
       },
       garage: { capacity: 8, vehicles: [starter] },
@@ -227,6 +229,7 @@ export class Game {
     this.state.player.name = name || 'Driver';
     this.economy.money = this.state.player.money;
     this._ensureDailyChallenge();
+    this._ensureWeeklyChallenge();
     this.visited = new Set(this.state.visitedDistricts || ['downtown']);
     this._spawnOwnedVehicles();
     this.enterWorld(true);
@@ -285,6 +288,10 @@ export class Game {
     if (!Array.isArray(this.state.player.daily.districtsVisited)) this.state.player.daily.districtsVisited = [];
     const dailyCash = Number(this.state.player.daily.cashEarned);
     this.state.player.daily.cashEarned = Number.isFinite(dailyCash) && dailyCash >= 0 ? dailyCash : 0;
+    this.state.player.newGamePlus = Math.min(10, Math.max(0, Math.trunc(Number(data.player?.newGamePlus) || 0)));
+    this.state.player.weekly = { date:'', challengeId:'', completed:false, streak:0, lastCompletedDate:'', startDistance:Number(this.state.player.distanceDriven || 0), startJobs:Number(this.state.player.jobsCompleted || 0), startWins:Number(this.state.player.racesWon || 0), cashEarned:0, ...(data.player?.weekly || {}) };
+    const weeklyCash = Number(this.state.player.weekly.cashEarned);
+    this.state.player.weekly.cashEarned = Number.isFinite(weeklyCash) && weeklyCash >= 0 ? weeklyCash : 0;
     this.state.player.shop = { owned: ['outfit_city','shoes_city','hair_classic','accessory_none'], equipped: { outfit:'outfit_city', shoes:'shoes_city', hair:'hair_classic', accessory:'accessory_none' }, ...(this.state.player.shop || {}), ...(data.player?.shop || {}), equipped: { ...(this.state.player.shop?.equipped || {}), ...(data.player?.shop?.equipped || {}) } };
     this._rankId = data.player?.rankId || this._rankId || null;
     this.state.player.shop.owned = Array.isArray(this.state.player.shop.owned) ? this.state.player.shop.owned : ['outfit_city','shoes_city','hair_classic','accessory_none'];
@@ -294,6 +301,7 @@ export class Game {
     this.visited = new Set(this.state.visitedDistricts);
     this.economy.money = this.state.player.money;
     this._ensureDailyChallenge();
+    this._ensureWeeklyChallenge();
     this._spawnOwnedVehicles();
     this.enterWorld(true);
     this.persist();
@@ -564,6 +572,7 @@ export class Game {
 
       this._missionUpdate(dt);
       this._updateDailyChallenge();
+      this._updateWeeklyChallenge();
       const interacted = this._poiPrompts(this.controller.mesh.position);
       if (!interacted && input.consumeEnter()) this.exitVehicle();
     } else {
@@ -573,7 +582,10 @@ export class Game {
       if (!interacted && input.consumeEnter()) this._tryEnter();
     }
 
-    if (this.mode !== 'driving') this._updateDailyChallenge();
+    if (this.mode !== 'driving') {
+      this._updateDailyChallenge();
+      this._updateWeeklyChallenge();
+    }
 
     const driving = this.mode === 'driving' && this.controller;
     const pos = driving ? this.controller.mesh.position : this.playerMesh.position;
@@ -921,6 +933,7 @@ export class Game {
 
   _updateDailyChallenge() {
     this._ensureDailyChallenge();
+    this._ensureWeeklyChallenge();
     const d = this.state.player.daily;
     if (d.completed) return;
     const c = getDailyChallenge();
@@ -948,6 +961,7 @@ export class Game {
 
   getDailyChallengeStatus() {
     this._ensureDailyChallenge();
+    this._ensureWeeklyChallenge();
     const d = this.state.player.daily;
     const c = getDailyChallenge();
     const distance = Math.max(0, (this.state.player.distanceDriven || 0) - (d.startDistance || 0));
@@ -961,16 +975,119 @@ export class Game {
     return { ...c, value, completed: !!d.completed, streak: Number(d.streak || 0) };
   }
 
+  _ensureWeeklyChallenge() {
+    const key = getWeeklyDateKey();
+    const challenge = getWeeklyChallenge();
+    const current = this.state.player.weekly || {};
+    if (current.date === key && current.challengeId === challenge.id) return;
+    const previousWeek = getWeeklyDateKey(new Date(Date.now() - 7 * 86400000));
+    const keepStreak = current.lastCompletedDate === previousWeek;
+    this.state.player.weekly = {
+      date: key,
+      challengeId: challenge.id,
+      completed: false,
+      streak: keepStreak ? Math.max(0, Number(current.streak) || 0) : 0,
+      lastCompletedDate: current.lastCompletedDate || '',
+      startDistance: Math.max(0, Number(this.state.player.distanceDriven) || 0),
+      startJobs: Math.max(0, Number(this.state.player.jobsCompleted) || 0),
+      startWins: Math.max(0, Number(this.state.player.racesWon) || 0),
+      cashEarned: 0
+    };
+  }
+
+  _updateWeeklyChallenge() {
+    this._ensureWeeklyChallenge();
+    const weekly = this.state.player.weekly;
+    if (weekly.completed) return;
+    const challenge = getWeeklyChallenge();
+    const player = this.state.player;
+    const distance = Math.max(0, Number(player.distanceDriven || 0) - Number(weekly.startDistance || 0));
+    const jobs = Math.max(0, Number(player.jobsCompleted || 0) - Number(weekly.startJobs || 0));
+    const wins = Math.max(0, Number(player.racesWon || 0) - Number(weekly.startWins || 0));
+    const cash = Math.max(0, Number(weekly.cashEarned || 0));
+    const progress = challenge.id === 'distance' ? distance
+      : challenge.id === 'cash' ? cash
+      : challenge.id === 'jobs' ? jobs : wins;
+    if (progress < challenge.target) return;
+
+    // Mark complete before paying the reward so it cannot count toward itself.
+    weekly.completed = true;
+    weekly.streak = Math.max(0, Number(weekly.streak) || 0) + 1;
+    weekly.lastCompletedDate = weekly.date;
+    const reward = challenge.reward + Math.min(5000, weekly.streak * 500);
+    this._earn(reward);
+    player.xp += challenge.xp;
+    player.level = levelFromXp(player.xp);
+    this.audio.success();
+    this.ui.toast('WEEKLY CITY TRIAL COMPLETE! +' + this.economy.format(reward) + ' • ' + weekly.streak + ' WEEK STREAK');
+    this.persist();
+  }
+
+  getWeeklyChallengeStatus() {
+    this._ensureWeeklyChallenge();
+    const weekly = this.state.player.weekly;
+    const challenge = getWeeklyChallenge();
+    const player = this.state.player;
+    const distance = Math.max(0, Number(player.distanceDriven || 0) - Number(weekly.startDistance || 0));
+    const jobs = Math.max(0, Number(player.jobsCompleted || 0) - Number(weekly.startJobs || 0));
+    const wins = Math.max(0, Number(player.racesWon || 0) - Number(weekly.startWins || 0));
+    const value = challenge.id === 'distance' ? distance
+      : challenge.id === 'cash' ? Number(weekly.cashEarned || 0)
+      : challenge.id === 'jobs' ? jobs : wins;
+    return { ...challenge, value, completed: !!weekly.completed, streak: Number(weekly.streak || 0), week: weekly.date };
+  }
+
+  getCampaignRewards(mission) {
+    const tier = Math.min(10, Math.max(0, Number(this.state.player.newGamePlus) || 0));
+    return {
+      reward: Math.round(Number(mission?.reward || 0) * (1 + tier * 0.12)),
+      xp: Math.round(Number(mission?.xp || 0) * (1 + tier * 0.08))
+    };
+  }
+
+  startNewGamePlus() {
+    const completed = new Set(this.state.player.campaignCompleted || []);
+    const fullCampaignComplete = Array.from({ length: CAMPAIGN_MISSIONS.length }, (_, i) => i + 1)
+      .every(level => completed.has(level));
+    const tier = Math.min(10, Math.max(0, Number(this.state.player.newGamePlus) || 0));
+    if (!fullCampaignComplete) {
+      this.ui.toast('COMPLETE ALL 20 CAMPAIGN LEVELS TO UNLOCK NEW GAME+');
+      return false;
+    }
+    if (this.activeMission) {
+      this.ui.toast('FINISH OR LEAVE YOUR CURRENT MISSION BEFORE STARTING NEW GAME+');
+      return false;
+    }
+    if (tier >= 10) {
+      this.ui.toast('MAX NEW GAME+ CAREER TIER REACHED');
+      return false;
+    }
+
+    // Keep all player, garage, economy, achievement and lifetime-stat records.
+    // Only the 20-level campaign completion state restarts.
+    this.state.player.newGamePlus = tier + 1;
+    this.state.player.campaignLevel = 1;
+    this.state.player.campaignCompleted = [];
+    this.levelCelebration = null;
+    this._clearMissionWaypoint();
+    this._clearRoute();
+    this._clearRaceMarkers();
+    this._clearRaceAI();
+    this._clearCampaignRivals();
+    this.persist();
+    this.ui.toast('NEW GAME+ ' + this.state.player.newGamePlus + ' STARTED — GARAGE, CASH, XP AND LIFETIME RECORDS PRESERVED.');
+    return true;
+  }
+
   getCampaignMission() {
     return getCampaignMission(this.state.player.campaignLevel || 1);
   }
 
   _campaignTimeLimit(type) {
-    // Generous but meaningful campaign timer. The clock starts when the level
-    // begins and is shared across pickup/delivery stages.
-    if (type === 'race') return 150;
-    if (type === 'job') return 210;
-    return 180;
+    // New Game+ progressively tightens the timer while retaining a fair floor.
+    const base = type === 'race' ? 150 : type === 'job' ? 210 : 180;
+    const tier = Math.min(10, Math.max(0, Number(this.state.player.newGamePlus) || 0));
+    return Math.max(75, Math.round(base / (1 + tier * 0.045)));
   }
 
   _failCampaignMissionByTimeout() {
@@ -1048,6 +1165,8 @@ export class Game {
     this.economy.earn(value);
     const d = this.state.player.daily;
     if (d && !d.completed) d.cashEarned = Math.max(0, Number(d.cashEarned || 0)) + value;
+    const weekly = this.state.player.weekly;
+    if (weekly && !weekly.completed) weekly.cashEarned = Math.max(0, Number(weekly.cashEarned || 0)) + value;
     return value;
   }
 
@@ -1073,8 +1192,9 @@ export class Game {
       ? CAMPAIGN_MISSIONS.length
       : nextUnlocked;
     this.state.player.missionsCompleted++;
-    this._earn(m.reward);
-    this.state.player.xp += m.xp;
+    const rewards = this.getCampaignRewards(m);
+    this._earn(rewards.reward);
+    this.state.player.xp += rewards.xp;
     this.state.player.level = levelFromXp(this.state.player.xp);
     const next = getCampaignMission(m.level + 1);
     this.activeMission = null;
@@ -1084,12 +1204,12 @@ export class Game {
     this.audio.success();
     if (next) {
       this.state.player.campaignLevel = next.level;
-      this.ui.toast(`LEVEL ${m.level} COMPLETE! LEVEL ${next.level} UNLOCKED! +${this.economy.format(m.reward)} +${m.xp} XP`);
+      this.ui.toast(`LEVEL ${m.level} COMPLETE! LEVEL ${next.level} UNLOCKED! +${this.economy.format(rewards.reward)} +${rewards.xp} XP`);
       this.persist();
       this._startLevelCompleteCelebration(m.level, next.level);
     } else {
       this.state.player.campaignLevel = m.level;
-      this.ui.toast(`CAMPAIGN COMPLETE! +${this.economy.format(m.reward)} +${m.xp} XP`);
+      this.ui.toast(`CAMPAIGN COMPLETE! +${this.economy.format(rewards.reward)} +${rewards.xp} XP • NEW GAME+ UNLOCKED`);
     }
     this.persist();
   }
