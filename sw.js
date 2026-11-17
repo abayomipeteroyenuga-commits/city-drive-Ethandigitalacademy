@@ -1,4 +1,4 @@
-const CACHE_NAME='ethan-city-drive-shell-v1';
+const CACHE_NAME='ethan-city-drive-shell-v2';
 const SHELL=['/','/index.html','/manifest.webmanifest','/city-drive-icon.svg','/css/style.css','/css/hud.css','/css/menus.css','/css/responsive.css','/js/main.js','/vendor/three/three.module.js'];
 self.addEventListener('install',event=>{event.waitUntil((async()=>{const c=await caches.open(CACHE_NAME);await Promise.all(SHELL.map(async path=>{try{const r=await fetch(path,{cache:'reload'});if(r.ok)await c.put(path,r)}catch{}}));await self.skipWaiting()})())});
 self.addEventListener('activate',event=>{event.waitUntil((async()=>{const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('ethan-city-drive-')&&k!==CACHE_NAME).map(k=>caches.delete(k)));await self.clients.claim()})())});
