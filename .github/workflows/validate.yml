@@ -1,0 +1,22 @@
+name: Validate CITY DRIVE
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+    branches: [main]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check JavaScript syntax
+        run: find js api -type f -name '*.js' -print0 | xargs -0 -r -n1 node --experimental-default-type=module --check
+      - name: Test weekly challenge rotation
+        run: node --experimental-default-type=module --test js/missions.test.mjs
+      - name: Validate web manifest
+        run: node -e "JSON.parse(require('fs').readFileSync('manifest.webmanifest','utf8')); console.log('Manifest JSON valid')"

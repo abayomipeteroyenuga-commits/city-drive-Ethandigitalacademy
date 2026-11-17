@@ -224,6 +224,7 @@ export class UI {
       this.$('mission-title').textContent = game.activeMission.name;
       if (game.activeMission.campaign) {
         const cm = game.activeMission.campaign;
+        const campaignRewards = game.getCampaignRewards?.(cm) || cm;
         const stage = game.activeMission.stage;
         const isStagedJob = game.activeMission.campaignType === 'job' && game.activeMission.stages;
         this.$('mission-objective').textContent = isStagedJob
@@ -232,9 +233,9 @@ export class UI {
         if (game.activeMission.dest) {
           const p = game.controller?.mesh.position || game.playerMesh.position;
           const d = Math.hypot(p.x - game.activeMission.dest.x, p.z - game.activeMission.dest.z);
-          this.$('mission-distance').textContent = `DISTANCE: ${(d / 100).toFixed(1)} km  •  REWARD: ${game.economy.format(cm.reward)} + ${cm.xp} XP`;
+          this.$('mission-distance').textContent = `DISTANCE: ${(d / 100).toFixed(1)} km  •  REWARD: ${game.economy.format(campaignRewards.reward)} + ${campaignRewards.xp} XP`;
         } else {
-          this.$('mission-distance').textContent = `REWARD: ${game.economy.format(cm.reward)} + ${cm.xp} XP`;
+          this.$('mission-distance').textContent = `REWARD: ${game.economy.format(campaignRewards.reward)} + ${campaignRewards.xp} XP`;
         }
         this.$('mission-help').textContent = isStagedJob
           ? `CAMPAIGN LEVEL ${cm.level}/${CAMPAIGN_MISSIONS.length} • STEP ${stage === 0 ? '1/2 — PICKUP' : '2/2 — DELIVERY'} • FOLLOW THE COLORED ROUTE`
@@ -244,9 +245,9 @@ export class UI {
         if (rivals.length) {
           const order = [...rivals].sort((a,b) => (b.progress || 0) - (a.progress || 0));
           const lead = order[0];
-          this.$('mission-reward').textContent = `🏆 REWARD  ${game.economy.format(cm.reward)}  +  ${cm.xp} XP • 🚗 RIVALS: 3 • LEADER ${lead?.name || 'AI'} ${Math.round(lead?.progress || 0)}%`;
+          this.$('mission-reward').textContent = `🏆 REWARD  ${game.economy.format(campaignRewards.reward)}  +  ${campaignRewards.xp} XP • 🚗 RIVALS: 3 • LEADER ${lead?.name || 'AI'} ${Math.round(lead?.progress || 0)}%`;
         } else {
-          this.$('mission-reward').textContent = `🏆 REWARD  ${game.economy.format(cm.reward)}  +  ${cm.xp} XP`;
+          this.$('mission-reward').textContent = `🏆 REWARD  ${game.economy.format(campaignRewards.reward)}  +  ${campaignRewards.xp} XP`;
         }
       } else if (game.activeMission.kind === 'job') {
         this._hideMissionTimer();
@@ -645,30 +646,43 @@ export class UI {
       const done = completed.has(m.level);
       const active = current?.level === m.level;
       const locked = !done && !active && m.level > (game.state.player.campaignLevel || 1);
+      const rewards = game.getCampaignRewards?.(m) || m;
       return `<div class="mission-card ${active?'campaign-active':''} ${done?'campaign-done':''}">
         <div class="mission-number">LEVEL ${m.level} ${done?'✓':locked?'🔒':''}</div>
         <h3>${m.title}</h3>
         <p><strong>DO THIS:</strong> ${m.objective}</p>
-        <p class="mission-reward">🏆 REWARD: <b>${game.economy.format(m.reward)}</b> + <b>${m.xp} XP</b></p>
+        <p class="mission-reward">🏆 REWARD: <b>${game.economy.format(rewards.reward)}</b> + <b>${rewards.xp} XP</b></p>
         ${active ? '<span class="mission-status">CURRENT MISSION</span>' : done ? '<span class="mission-status">COMPLETED</span>' : locked ? '<span class="mission-status">LOCKED — COMPLETE PREVIOUS LEVEL</span>' : ''}
       </div>`;
     }).join('');
     // The campaign level is the authoritative unlock pointer. A completed
     // level always exposes the next level instead of leaving the player stuck.
     const unlockedLevel = Math.min(CAMPAIGN_MISSIONS.length, Math.max(1, Number(game.state.player.campaignLevel) || 1));
-    const campaignFinished = completed.has(CAMPAIGN_MISSIONS.length);
+    const campaignFinished = Array.from({ length: CAMPAIGN_MISSIONS.length }, (_, i) => i + 1).every(level => completed.has(level));
+    const currentTier = Math.max(0, Number(game.state.player.newGamePlus) || 0);
+    const nextTier = Math.min(10, currentTier + 1);
     const action = !game.activeMission && !campaignFinished
       ? `<button class="menu-btn primary" id="start-campaign-now">START LEVEL ${unlockedLevel}</button>`
-      : (campaignFinished ? `<div class="mission-status">🏆 CAMPAIGN COMPLETE — ALL 20 LEVELS FINISHED</div>` : '');
+      : (campaignFinished ? `<div class="mission-status">🏆 CAMPAIGN COMPLETE — ALL 20 LEVELS FINISHED · ${currentTier ? `NEW GAME+ ${currentTier}` : 'CAREER 1'}</div>${currentTier >= 10 ? '<p class="mission-status">MAX NEW GAME+ TIER REACHED</p>' : `<button class="menu-btn primary" id="start-new-game-plus">START NEW GAME+ ${nextTier}</button><p style="color:#9aa;font-size:.8rem;margin:8px 0">Keep your garage, cars, cash, XP, achievements and lifetime records. Mission timers tighten and campaign rewards increase.</p>`}` : '');
     const jobs = POIS.jobs.map(j => `<div class="vehicle-card mission-card"><div class="mission-number">SIDE JOB</div><h3>${j.name}</h3><p>Drive to the gold marker and complete the job.</p><button class="menu-btn" data-job="${j.type}">START SIDE JOB</button></div>`).join('');
     const dc = game.getDailyChallengeStatus?.();
     const daily = dc ? `<div class="daily-challenge-card ${dc.completed?'daily-done':''}"><div class="daily-badge">DAILY LIVE</div><h2>🔥 ${dc.title}</h2><p><strong>DO THIS:</strong> ${dc.text}</p><div class="daily-progress">${dc.completed ? '✓ COMPLETE' : `${Math.min(dc.value, dc.target).toFixed(dc.id==='distance'||dc.id==='speed'?1:0)} / ${dc.target}`}</div><p class="mission-reward">REWARD: <b>${game.economy.format(dc.reward)}</b> + <b>${dc.xp} XP</b> • STREAK: <b>${dc.streak} DAYS</b></p></div>` : '';
-    this.openPanel('CAMPAIGN MISSIONS', `${daily}<div class="mission-brief campaign-brief"><strong>YOUR CAREER — 20 LEVELS</strong><span>Complete the levels in order. Every level gives CASH + XP and unlocks the next one.</span>${action}</div><div class="campaign-list">${campaign}</div><h3 style="margin:20px 0 10px;color:#00d4ff">SIDE JOBS</h3>${jobs}`);
+    const wc = game.getWeeklyChallengeStatus?.();
+    const weekly = wc ? `<div class="daily-challenge-card weekly-challenge-card ${wc.completed?'daily-done':''}"><div class="daily-badge">WEEKLY LIVE</div><h2>🏁 ${wc.title}</h2><p><strong>THIS WEEK:</strong> ${wc.text}</p><div class="daily-progress">${wc.completed ? '✓ COMPLETE' : `${Math.min(wc.value, wc.target).toFixed(wc.id==='distance'?1:0)} / ${wc.target}`}</div><p class="mission-reward">REWARD: <b>${game.economy.format(wc.reward)}</b> + <b>${wc.xp} XP</b> • STREAK: <b>${wc.streak} WEEKS</b></p></div>` : '';
+    this.openPanel('CAMPAIGN MISSIONS', `${daily}${weekly}<div class="mission-brief campaign-brief"><strong>YOUR CAREER — 20 LEVELS</strong><span>Weekly trials rotate on Monday. New Game+ keeps your collection and lifetime progress while increasing campaign challenge and rewards.</span>${action}</div><div class="campaign-list">${campaign}</div><h3 style="margin:20px 0 10px;color:#00d4ff">SIDE JOBS</h3>${jobs}`);
     this.$('start-campaign-now')?.addEventListener('click', () => {
       this.closePanel();
       if (!game.controller || game.mode !== 'driving') game.enterWorld(true, { startGrid: true });
       const started = game.startCampaignMission();
       if (!started) this.toast('Unable to start this campaign level. Make sure you are in a vehicle.');
+    });
+    this.$('start-new-game-plus')?.addEventListener('click', () => {
+      const nextTier = Math.max(0, Number(game.state.player.newGamePlus) || 0) + 1;
+      if (!confirm(`Start NEW GAME+ ${nextTier}? Your vehicles, garage, cash, XP, achievements and lifetime records will be preserved. The campaign restarts at Level 1 with tighter timers and higher rewards.`)) return;
+      if (!game.startNewGamePlus()) return;
+      this.closePanel();
+      if (!game.controller || game.mode !== 'driving') game.enterWorld(true, { startGrid: true });
+      if (!game.startCampaignMission()) this.toast('New Game+ is ready. Open Campaign Missions to start Level 1.');
     });
     this.$('ui-panels').querySelectorAll('[data-job]').forEach(b => {
       b.onclick = () => {

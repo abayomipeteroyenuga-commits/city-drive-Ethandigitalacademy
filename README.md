@@ -82,3 +82,11 @@ HTML5, CSS3, JavaScript modules, Three.js r160 (bundled locally for offline play
 - Rotating daily challenge with daily streak bonuses to encourage repeat play.
 - Daily challenge progress is saved offline with campaign progress.
 - Career rankings are offline-first; the Vercel leaderboard endpoint provides online rankings when deployed. Persistent production-wide ranking storage requires a durable server-side database/KV provider.
+
+
+## Endgame — Weekly City Trials & New Game+
+- Weekly City Trial rotates every Monday at 00:00 UTC: long-distance driving, city earnings, side jobs or race wins.
+- Weekly rewards include cash and XP, plus a consecutive-week streak bonus. Progress is saved locally and works offline.
+- Finish all 20 campaign levels to unlock New Game+. Start a new career tier without losing the garage, vehicles, cash, XP, achievements, daily progress or lifetime records.
+- Each New Game+ tier tightens campaign mission timers and increases campaign cash/XP rewards. Up to 10 tiers are supported.
+- Existing version 2 saves are migrated with defaults for the new career and weekly-trial fields.
