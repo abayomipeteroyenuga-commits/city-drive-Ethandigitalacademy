@@ -22,7 +22,8 @@ export const ACHIEVEMENT_DEFS = [
   { id: 'luxury_owner', name: 'Luxury Owner', desc: 'Own the Royal Executive or Vortex X.' },
   { id: 'race_champion', name: 'Race Champion', desc: 'Win 5 races.' },
   { id: 'long_distance', name: 'Long Distance', desc: 'Drive 50 km total.' },
-  { id: 'city_legend', name: 'City Legend', desc: 'Reach level 10.' }
+  { id: 'city_legend', name: 'City Legend', desc: 'Reach level 10.' },
+  { id: 'new_game_plus', name: 'Veteran Reborn', desc: 'Complete the original campaign and begin New Game+.' }
 ];
 
 export function checkAchievements(state, flags) {
@@ -56,6 +57,7 @@ export function checkAchievements(state, flags) {
   if (state.player.racesWon >= 5) unlock('race_champion');
   if ((state.player.distanceDriven || 0) >= 50) unlock('long_distance');
   if (state.player.level >= 10) unlock('city_legend');
+  if ((state.player.newGamePlus || 0) >= 1) unlock('new_game_plus');
 
   state.achievements = unlocked;
   return newly;
