@@ -152,3 +152,28 @@ export function getWeeklyChallenge(date = new Date()) {
   const key = getWeeklyDateKey(date);
   return { ...WEEKLY_POOL[hashDate(key) % WEEKLY_POOL.length] };
 }
+
+
+/**
+ * CITY DRIVE — weekly endgame trials.
+ * The challenge changes at 00:00 UTC each Monday, keeping the same target
+ * for every player during that weekly window.
+ */
+const WEEKLY_POOL = [
+  { id:'distance', title:'LONG HAUL', text:'Drive 20 km this week', target:20, reward:5000, xp:450 },
+  { id:'cash', title:'CITY TYCOON', text:'Earn 8,000 in city cash this week', target:8000, reward:6000, xp:500 },
+  { id:'jobs', title:'BUSY DRIVER', text:'Complete 5 side jobs this week', target:5, reward:5500, xp:475 },
+  { id:'wins', title:'PODIUM COLLECTOR', text:'Win 3 races this week', target:3, reward:6500, xp:550 }
+];
+
+export function getWeeklyDateKey(date = new Date()) {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const day = d.getUTCDay();
+  d.setUTCDate(d.getUTCDate() - (day === 0 ? 6 : day - 1));
+  return d.toISOString().slice(0, 10);
+}
+
+export function getWeeklyChallenge(date = new Date()) {
+  const key = getWeeklyDateKey(date);
+  return { ...WEEKLY_POOL[hashDate(key) % WEEKLY_POOL.length] };
+}
